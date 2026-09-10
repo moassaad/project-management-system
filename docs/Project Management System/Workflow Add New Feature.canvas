@@ -1,0 +1,35 @@
+{
+	"nodes":[
+		{"id":"b01365eeed8ed484","type":"text","text":"upload sprint and tickets to github with label","x":-40,"y":-180,"width":250,"height":60},
+		{"id":"046ac7e6639f7395","type":"text","text":"verified if the sprint and check it is related with framework (frontend-react - backend-spring-boot) and how many tickets is open.","x":-40,"y":0,"width":250,"height":146},
+		{"id":"6337303fe8ff855c","type":"text","text":"implement the ready ticket status or ready and re-implement  ","x":-540,"y":23,"width":250,"height":101},
+		{"id":"6a6a76c7f947d70f","type":"text","text":"when finished update states ticket label to review and write all result on new comment  in issue","x":-540,"y":240,"width":250,"height":148},
+		{"id":"db480369051e0fce","type":"text","text":"apply all changes to new commit and push changed ","x":-540,"y":480,"width":250,"height":60},
+		{"id":"8e23928f51cc529f","type":"text","text":"review the ticket with review status label","x":-540,"y":660,"width":250,"height":60},
+		{"id":"3cf025453d03ebfb","x":-40,"y":640,"width":250,"height":101,"type":"text","text":"update status any ticket dependency on the finished ticket from blocked to ready"},
+		{"id":"00212e66a5ab5323","x":-465,"y":859,"width":100,"height":60,"type":"text","text":"if ok"},
+		{"id":"d68bb21d8bc3547b","x":-40,"y":1020,"width":250,"height":99,"type":"text","text":"change status ticket from review to done or finished"},
+		{"id":"c091b00ef9e0b458","type":"text","text":"convert to sprint","x":-540,"y":-460,"width":250,"height":60},
+		{"id":"9de85a5f63d79244","type":"text","text":"new feature or command","x":-40,"y":-460,"width":250,"height":60},
+		{"id":"ddd16a3ba88441f8","x":-540,"y":-180,"width":250,"height":60,"type":"text","text":"Human Approval"},
+		{"id":"f67cd3128cfb93ff","type":"text","text":"convert to group of tickets","x":-540,"y":-320,"width":250,"height":60},
+		{"id":"2717d99d70f4a544","x":-290,"y":859,"width":250,"height":60,"type":"text","text":"change status ticket from review to ready or blocked"}
+	],
+	"edges":[
+		{"id":"fd0e68cf43130c38","fromNode":"9de85a5f63d79244","fromSide":"left","toNode":"c091b00ef9e0b458","toSide":"right","label":"AI general"},
+		{"id":"594be3f38f3f37c9","fromNode":"c091b00ef9e0b458","fromSide":"bottom","toNode":"f67cd3128cfb93ff","toSide":"top","label":"AI general"},
+		{"id":"f2976053cfb195f8","fromNode":"f67cd3128cfb93ff","fromSide":"bottom","toNode":"ddd16a3ba88441f8","toSide":"top","label":"AI general"},
+		{"id":"1cd3ba0156554713","fromNode":"b01365eeed8ed484","fromSide":"bottom","toNode":"046ac7e6639f7395","toSide":"top","label":"AI app"},
+		{"id":"b1bf226dc1b0fc87","fromNode":"046ac7e6639f7395","fromSide":"left","toNode":"6337303fe8ff855c","toSide":"right","label":"AI app"},
+		{"id":"539161ca804b668f","fromNode":"6337303fe8ff855c","fromSide":"bottom","toNode":"6a6a76c7f947d70f","toSide":"top","label":"AI app"},
+		{"id":"c4bac0b4af468a88","fromNode":"6a6a76c7f947d70f","fromSide":"bottom","toNode":"db480369051e0fce","toSide":"top","label":"AI app / Human"},
+		{"id":"a5a838c1295153ab","fromNode":"db480369051e0fce","fromSide":"bottom","toNode":"8e23928f51cc529f","toSide":"top","label":"AI app"},
+		{"id":"d26e43f3948690c1","fromNode":"8e23928f51cc529f","fromSide":"bottom","toNode":"00212e66a5ab5323","toSide":"top","label":"AI app"},
+		{"id":"ba68aed6714c9736","fromNode":"00212e66a5ab5323","fromSide":"bottom","toNode":"d68bb21d8bc3547b","toSide":"left","label":"Yes"},
+		{"id":"62daf8ba5a8ea64e","fromNode":"00212e66a5ab5323","fromSide":"right","toNode":"2717d99d70f4a544","toSide":"left","label":"No"},
+		{"id":"438c831062ab95a2","fromNode":"d68bb21d8bc3547b","fromSide":"top","toNode":"3cf025453d03ebfb","toSide":"bottom","label":"AI app"},
+		{"id":"ee9bb822861e2888","fromNode":"2717d99d70f4a544","fromSide":"top","toNode":"046ac7e6639f7395","toSide":"bottom","label":"AI app"},
+		{"id":"5e43040d398dcb0d","fromNode":"3cf025453d03ebfb","fromSide":"top","toNode":"046ac7e6639f7395","toSide":"bottom","label":"AI app"},
+		{"id":"ad18eb55d63912b2","fromNode":"ddd16a3ba88441f8","fromSide":"right","toNode":"b01365eeed8ed484","toSide":"left","label":"AI general"}
+	]
+}

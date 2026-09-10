@@ -657,56 +657,69 @@ done
 
 ### Agent Execution
 
-When instructed to execute the current Sprint, the Agent should:
+When instructed to execute the current Sprint, the Agent MUST:
 
-1. Find the next unblocked Ticket GitHub Issue labeled `ready`.
-2. Read the Ticket Issue and relevant project documentation.
-3. Implement only that Ticket.
-4. Validate the implementation.
-5. Update the implementation CHANGELOG when required.
-6. Update the Ticket GitHub Issue with a concise completion summary.
-7. Remove `ready` and apply `review`.
-8. Propose a Git commit message.
-9. After a Ticket enters `review`, the Agent must stop and wait for explicit project-owner approval.
+1. Find the current implementation area's next executable Ticket.
+2. A Ticket is executable only when:
+   - it is open
+   - it is not blocked
+   - all dependencies are completed
+   - it belongs to the current implementation area
+3. If an executable Ticket does not have the `ready` label, the Agent MUST apply `ready` before implementation.
+4. Read the Ticket Issue and relevant project documentation.
+5. Implement only that Ticket.
+6. Validate the implementation.
+7. Update the implementation CHANGELOG when required.
+8. Update the Ticket GitHub Issue with a concise completion summary.
+9. Remove `ready` from the completed Ticket.
+10. Apply `review` to the completed Ticket.
+11. STOP and wait for explicit project-owner approval.
 
-After approval:
-- complete the current Ticket lifecycle
-- close the current Ticket
-- identify the next executable Ticket
-- mark it `ready`
-- implement that Ticket
-- stop again for review
+The Agent MUST NOT implement another Ticket before approval.
 
-Do not wait for the next Ticket to be manually marked `ready` when its dependencies are already satisfied.
+After explicit approval of the current `review` Ticket, the Agent MUST:
 
-The Agent must not automatically continue to the next Ticket.
+1. Remove `review` from the approved Ticket.
+2. Close the approved Ticket GitHub Issue.
+3. Identify the next executable Ticket.
+4. If the next executable Ticket does not have `ready`, apply `ready`.
+5. Implement that Ticket.
+6. After implementation, remove `ready`, apply `review`, and STOP again.
+
+The Agent MUST NOT skip, delay, or manually request the `ready` label for an executable Ticket when its dependencies are already satisfied.
+
+The Agent MUST NOT consider a Ticket complete until its GitHub Issue is closed after approval.
 
 ### Review
 
-After completing a Ticket, the Agent must wait for explicit project-owner approval.
+A completed Ticket MUST enter the following state before waiting for review:
 
-When the project owner explicitly approves the current Ticket using approval/completion language such as:
+- `ready` removed
+- `review` applied
+- GitHub Issue remains open
+
+The Agent MUST stop after applying `review`.
+
+When the project owner explicitly approves the current Ticket using:
 - `approved`
 - `approval`
 - `done`
 
-the Agent must:
+the Agent MUST:
 
-1. Remove the `review` label from the completed Ticket.
-2. Close the completed Ticket GitHub Issue.
-3. Identify the next executable Ticket in the current Sprint.
-4. The next executable Ticket is the first Ticket that:
-   - is open
-   - is not blocked
-   - has its dependencies completed
-   - belongs to the current implementation area
-5. Apply the `ready` label to that Ticket.
-6. Continue execution with that Ticket.
+1. Verify that the approved Ticket is the current Ticket awaiting review.
+2. Remove `review`.
+3. Close the GitHub Issue.
+4. Find the next executable Ticket.
+5. Apply `ready` to that Ticket.
+6. Begin implementation of that Ticket.
+7. Stop again after that Ticket reaches `review`.
 
-The Agent must not require the next Ticket to already have the `ready` label after an explicit approval.
-The Agent may promote the next executable Ticket from its current non-ready state to `ready`.
+If the next Ticket is currently labeled `blocked` but all of its dependencies are now completed, the Agent MUST remove `blocked` and apply `ready`.
 
-If no executable Ticket exists, stop and report why.
+If dependencies are not completed, the Agent MUST keep the Ticket `blocked` and move to the next executable Ticket.
+
+The Agent MUST NOT continue implementation while the approved Ticket remains open or still has `review`.
 
 ### Commit Suggestions
 

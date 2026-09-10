@@ -667,32 +667,46 @@ When instructed to execute the current Sprint, the Agent should:
 6. Update the Ticket GitHub Issue with a concise completion summary.
 7. Remove `ready` and apply `review`.
 8. Propose a Git commit message.
-9. After the Ticket enters `review`, stop and wait for an explicit project-owner approval.
+9. After a Ticket enters `review`, the Agent must stop and wait for explicit project-owner approval.
 
-Approval keywords may include:
-- `approved`
-- `approval`
-- `done`
+After approval:
+- complete the current Ticket lifecycle
+- close the current Ticket
+- identify the next executable Ticket
+- mark it `ready`
+- implement that Ticket
+- stop again for review
 
-When explicit approval is received, complete the GitHub Ticket lifecycle and continue with the next unblocked Ticket according to the rules above.
+Do not wait for the next Ticket to be manually marked `ready` when its dependencies are already satisfied.
 
 The Agent must not automatically continue to the next Ticket.
 
 ### Review
 
-After completing a Ticket, the Agent must wait for project-owner review.
+After completing a Ticket, the Agent must wait for explicit project-owner approval.
 
-When the project owner approves the Ticket by explicitly indicating approval or completion, the Agent should:
+When the project owner explicitly approves the current Ticket using approval/completion language such as:
+- `approved`
+- `approval`
+- `done`
 
-1. Remove the `review` label.
-2. Close the Ticket GitHub Issue.
-3. Identify the next unblocked Ticket.
-4. Apply `ready` to the next executable Ticket.
-5. Continue with that Ticket only after the approval command.
+the Agent must:
 
-The Agent must not interpret unrelated messages as approval.
+1. Remove the `review` label from the completed Ticket.
+2. Close the completed Ticket GitHub Issue.
+3. Identify the next executable Ticket in the current Sprint.
+4. The next executable Ticket is the first Ticket that:
+   - is open
+   - is not blocked
+   - has its dependencies completed
+   - belongs to the current implementation area
+5. Apply the `ready` label to that Ticket.
+6. Continue execution with that Ticket.
 
-If the project owner requests changes, keep the Ticket open with `review` and apply the requested changes before asking for approval again.
+The Agent must not require the next Ticket to already have the `ready` label after an explicit approval.
+The Agent may promote the next executable Ticket from its current non-ready state to `ready`.
+
+If no executable Ticket exists, stop and report why.
 
 ### Commit Suggestions
 

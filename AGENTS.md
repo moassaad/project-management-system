@@ -667,7 +667,14 @@ When instructed to execute the current Sprint, the Agent should:
 6. Update the Ticket GitHub Issue with a concise completion summary.
 7. Remove `ready` and apply `review`.
 8. Propose a Git commit message.
-9. Stop and wait for project-owner review.
+9. After the Ticket enters `review`, stop and wait for an explicit project-owner approval.
+
+Approval keywords may include:
+- `approved`
+- `approval`
+- `done`
+
+When explicit approval is received, complete the GitHub Ticket lifecycle and continue with the next unblocked Ticket according to the rules above.
 
 The Agent must not automatically continue to the next Ticket.
 
@@ -675,14 +682,17 @@ The Agent must not automatically continue to the next Ticket.
 
 After completing a Ticket, the Agent must wait for project-owner review.
 
-The Agent should not mark the Ticket complete based only on its own validation.
+When the project owner approves the Ticket by explicitly indicating approval or completion, the Agent should:
 
-The project owner may:
+1. Remove the `review` label.
+2. Close the Ticket GitHub Issue.
+3. Identify the next unblocked Ticket.
+4. Apply `ready` to the next executable Ticket.
+5. Continue with that Ticket only after the approval command.
 
-* Approve the Ticket
-* Request changes
-* Mark the Ticket blocked
-* Close the Ticket when appropriate
+The Agent must not interpret unrelated messages as approval.
+
+If the project owner requests changes, keep the Ticket open with `review` and apply the requested changes before asking for approval again.
 
 ### Commit Suggestions
 

@@ -47,9 +47,30 @@ server:
 spring:
   application:
     name: backend-spring-boot
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pms}
+    username: ${SPRING_DATASOURCE_USERNAME:pms}
+    password: ${SPRING_DATASOURCE_PASSWORD:pms}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
 ```
 
-Change `server.port` to run on a different port. No datasource/JPA/validation/security configured in Sprint 001 (bootstrap only).
+Change `server.port` to run on a different port.
+
+**Database (PostgreSQL 16-alpine):**
+- `application.yml` defines datasource via `${SPRING_DATASOURCE_URL}` / `USERNAME` / `PASSWORD` (defaults `jdbc:postgresql://localhost:5432/pms` / `pms`/`pms`) + Hikari defaults — no JPA/Flyway yet
+- `application-dev.yml` keeps explicit `jdbc:postgresql://localhost:5432/pms` for local dev
+- `application-test.yml` keeps placeholder `${SPRING_DATASOURCE_URL}` for Testcontainers override (BE-S002-08)
+- Local DB: `docker-compose.yml` (`pms-db`, `postgres:16-alpine`, `5432:5432`, `POSTGRES_DB=pms POSTGRES_USER=pms POSTGRES_PASSWORD=pms`, volume `pms-db-data`, healthcheck `pg_isready`)
+  ```bash
+  docker compose up -d pms-db   # from backend-spring-boot/
+  docker compose down
+  ```
+- `spring-boot:run` will start even if DB unreachable (Hikari lazy), but will fail on first connection — expected until DB is up; verify property binding via `./mvnw verify -DskipTests`
+
+No JPA/Flyway/validation/security yet (Sprint 002+).
 
 ## How to Test
 
@@ -74,9 +95,17 @@ Expected: `Tests run: 1, Failures: 0, Errors: 0` + `BUILD SUCCESS`.
 backend-spring-boot/
 ├── pom.xml
 ├── mvnw / mvnw.cmd / .mvn/wrapper/
+├── docker-compose.yml
 ├── src/
-│   ├── main/java/com/projectmanagementsystem/Application.java
-│   ├── main/resources/application.yml
+│   ├── main/java/com/projectmanagementsystem/
+│   │   ├── Application.java
+│   │   ├── config/ (package-info)
+│   │   ├── common/ (package-info)
+│   │   └── api/ (package-info)
+│   ├── main/resources/
+│   │   ├── application.yml
+│   │   ├── application-dev.yml
+│   │   └── application-test.yml
 │   └── test/java/com/projectmanagementsystem/ApplicationTests.java
 ├── sprints/sprint-001-bootstrap.md
 ├── README.md

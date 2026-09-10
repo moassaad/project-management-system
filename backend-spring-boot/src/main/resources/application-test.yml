@@ -1,6 +1,10 @@
 spring:
   application:
     name: backend-spring-boot
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pms}
+    username: ${SPRING_DATASOURCE_USERNAME:pms}
+    password: ${SPRING_DATASOURCE_PASSWORD:pms}
 
 server:
   port: 8080
@@ -10,5 +14,5 @@ logging:
     com.projectmanagementsystem: INFO
     org.springframework: INFO
 
-# Test profile placeholder — no datasource, JPA, Flyway, or Testcontainers wiring yet
-# Introduced in later Sprint 002 tickets
+# Test profile keeps placeholder for Testcontainers override (BE-S002-08)
+# No JPA/Flyway yet — introduced in BE-S002-03

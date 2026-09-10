@@ -4,3 +4,14 @@ server:
 spring:
   application:
     name: backend-spring-boot
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pms}
+    username: ${SPRING_DATASOURCE_USERNAME:pms}
+    password: ${SPRING_DATASOURCE_PASSWORD:pms}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000

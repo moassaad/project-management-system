@@ -15,3 +15,4 @@ _Sprint 001 — Backend Bootstrap — bootstrap only; no database, JPA, Flyway, 
 
 ### Added (Sprint 002)
 - [BE-S002-01] Establish backend structure and environment profiles — `config/`, `common/`, `api/` packages (package-info) + `application-dev.yml` / `application-test.yml` placeholders (no datasource/domain)
+- [BE-S002-02] Configure PostgreSQL datasource and Docker Compose — `org.postgresql:postgresql` (runtime), `docker-compose.yml` (`postgres:16-alpine`, `pms-db`, `5432:5432`), `spring.datasource` (`SPRING_DATASOURCE_*` placeholders, Hikari) + README docs

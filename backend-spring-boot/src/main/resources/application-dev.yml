@@ -1,6 +1,10 @@
 spring:
   application:
     name: backend-spring-boot
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pms
+    username: pms
+    password: pms
 
 server:
   port: 8080
@@ -10,5 +14,5 @@ logging:
     com.projectmanagementsystem: DEBUG
     org.springframework: INFO
 
-# No datasource, JPA, Flyway, validation, or API config yet — placeholder for dev profile
-# Introduced in later Sprint 002 tickets
+# Dev profile keeps localhost PostgreSQL; override via SPRING_DATASOURCE_* env if needed
+# No JPA/Flyway yet — introduced in BE-S002-03

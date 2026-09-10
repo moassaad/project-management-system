@@ -4,713 +4,6 @@
 
 This file defines the general operating rules for AI Agents working on this repository.
 
-The Agent is an implementation and review assistant.
-
-The Agent must follow the project's documented requirements, business rules, architecture, API contract, and development standards.
-
-The Agent must not silently make important product, architectural, security, API, or technology decisions.
-
----
-
-## 2. Source of Truth
-
-Before implementing a task, the Agent must read:
-
-1. `AGENTS.md`
-2. `docs/project-context.md`
-3. Relevant files under:
-
-   * `docs/requirements/`
-   * `docs/business-rules/`
-   * `docs/architecture/`
-   * `docs/api/`
-
-The Agent should read only the documentation relevant to the current task whenever possible.
-
-Do not load unrelated project documentation unnecessarily.
-
----
-
-## 3. Project Principles
-
-The project prioritizes:
-
-* Correctness
-* Maintainability
-* Simplicity
-* Testability
-* Security
-* Clear architecture
-* Small changes
-* High-quality implementation
-* Low unnecessary token/context consumption
-
-The Agent should prefer established and well-known solutions over custom abstractions.
-
-Do not introduce complexity without a real requirement.
-
----
-
-## 4. Implementation Model
-
-The project is implemented incrementally using small Tickets.
-
-The Agent must not attempt to implement the entire project from a single prompt.
-
-Each Ticket should represent one focused and independently reviewable objective.
-
-A Ticket may be part of a larger Feature or Sprint.
-
-The Agent should complete only the requested Ticket scope unless additional changes are strictly necessary.
-
----
-
-## 5. Ticket Execution Workflow
-
-For every Ticket:
-
-```text
-Read
-  ↓
-Understand
-  ↓
-Plan
-  ↓
-Implement
-  ↓
-Run
-  ↓
-Test
-  ↓
-Validate
-  ↓
-Review
-  ↓
-Report
-```
-
-### Step 1 — Read
-
-Read:
-
-* `AGENTS.md`
-* Relevant project context
-* Relevant requirements
-* Relevant business rules
-* Relevant architecture documentation
-* Relevant API documentation
-
-Do not unnecessarily read unrelated files.
-
-### Step 2 — Understand
-
-Identify:
-
-* Goal
-* Scope
-* Non-goals
-* Acceptance criteria
-* Affected feature
-* Relevant existing implementation
-
-### Step 3 — Plan
-
-Create a concise implementation plan before modifying code.
-
-The plan should identify:
-
-* Main approach
-* Expected files to change
-* Tests required
-
-Do not produce unnecessary detailed planning for trivial changes.
-
-### Step 4 — Implement
-
-Implement only the requested scope.
-
-Prefer existing project patterns.
-
-Reuse existing utilities, components, hooks, services, schemas, and abstractions when appropriate.
-
-Do not create duplicate infrastructure.
-
-### Step 5 — Run
-
-Run the application or the smallest relevant execution environment needed to validate the change.
-
-### Step 6 — Test
-
-Run relevant automated tests.
-
-Add or update tests when the Ticket changes observable behavior or introduces testable logic.
-
-### Step 7 — Validate
-
-When applicable, run:
-
-* Type checking
-* Linting
-* Formatting checks
-* Tests
-* Production build
-
-The Agent must not claim success for a check it did not actually run.
-
-### Step 8 — Review
-
-Before finishing:
-
-* Review all changed files.
-* Verify acceptance criteria.
-* Check for unrelated modifications.
-* Check for unnecessary dependencies.
-* Check for obvious regressions.
-* Check that architecture rules were respected.
-
-### Step 9 — Report
-
-Provide the required completion report described below.
-
----
-
-## 6. Minimal Change Principle
-
-Make the smallest set of changes required to complete the Ticket correctly.
-
-Do not modify unrelated files.
-
-Do not:
-
-* Refactor unrelated code
-* Rename unrelated files
-* Reformat unrelated code
-* Add unnecessary dependencies
-* Change unrelated configuration
-* Rewrite working infrastructure without need
-* Fix unrelated bugs unless they block the Ticket
-
-If an unrelated change is required, explain why it is necessary.
-
----
-
-## 7. Project Working State
-
-Every completed Ticket must leave the project in a working state.
-
-A Ticket is not considered complete if the implementation prevents the project from:
-
-* Starting
-* Building
-* Running relevant tests
-
-unless the Ticket explicitly concerns a temporary or intentionally incomplete state.
-
----
-
-## 8. Architecture Rules
-
-The frontend uses Feature-Based Architecture.
-
-Core structure:
-
-```text
-src/
-├── app/
-├── features/
-├── components/
-├── lib/
-├── config/
-├── hooks/
-├── utils/
-├── types/
-└── styles/
-```
-
-Use established architecture boundaries.
-
-### State
-
-```text
-Server State
-    → TanStack Query
-
-Local UI State
-    → React State
-
-Shared Client State
-    → Zustand
-```
-
-Do not duplicate server-owned state in Zustand without a documented reason.
-
-### API
-
-Feature-specific API operations belong inside the relevant feature.
-
-Common HTTP infrastructure belongs in the shared HTTP layer.
-
-Do not perform direct HTTP requests from React components.
-
-Preferred flow:
-
-```text
-Component
-   ↓
-Feature Logic / Hook
-   ↓
-Feature API
-   ↓
-Shared HTTP Infrastructure
-   ↓
-Backend API
-```
-
-### Routing
-
-Use the centralized React Router configuration.
-
-Do not create independent routing systems inside features.
-
-### Forms
-
-Use:
-
-* React Hook Form
-* Zod
-
-Form schemas and API schemas should remain conceptually separate unless they are genuinely the same representation.
-
----
-
-## 9. API Rules
-
-The API follows:
-
-* REST
-* JSON
-* HTTPS
-* `/api/v1`
-* UUID identifiers
-* Pagination
-* RFC 9457 Problem Details
-
-HTTP conventions:
-
-```text
-POST   → Create
-GET    → Read
-PUT    → Full Update
-PATCH  → Partial Update
-DELETE → Delete
-```
-
-Do not use `PUT` and `PATCH` interchangeably.
-
-The backend is the final authority for:
-
-* Authentication
-* Authorization
-* Validation
-* Business rules
-* Data integrity
-
-Frontend checks are not security boundaries.
-
----
-
-## 10. Authentication Rules
-
-Authentication uses:
-
-* Bearer Access Token
-* Refresh Token
-* Refresh Token Rotation
-
-Storage strategy:
-
-```text
-Access Token
-→ Frontend Memory
-
-Refresh Token
-→ HttpOnly + Secure Cookie
-```
-
-The frontend must not attempt to read the Refresh Token directly.
-
-Authentication behavior must follow the documented API contract.
-
-Do not introduce an alternative authentication strategy without explicit approval.
-
----
-
-## 11. API Contract Rule
-
-The API Contract is defined through the backend implementation and generated OpenAPI specification.
-
-The generated OpenAPI file must not be manually edited.
-
-API changes must be implemented in the backend and the OpenAPI specification regenerated.
-
-Do not invent undocumented API endpoints or response structures when an existing contract is available.
-
----
-
-## 12. Business Rules
-
-Business rules are documented under:
-
-```text
-docs/business-rules/
-```
-
-The Agent must follow them exactly.
-
-If the frontend hides an action based on permissions, the backend must still be treated as the final authority.
-
-Do not weaken or bypass business rules to simplify implementation.
-
----
-
-## 13. Technology Rules
-
-Use established project dependencies and patterns.
-
-Do not add a new dependency unless:
-
-1. It solves a real requirement.
-2. Existing project capabilities are insufficient.
-3. The dependency is appropriate for the project.
-4. The addition is within the Ticket scope.
-
-Do not add libraries merely because they are popular.
-
----
-
-## 14. Custom Abstraction Rule
-
-Prefer framework and library capabilities before creating custom abstractions.
-
-Do not create:
-
-* Generic wrappers
-* Generic utilities
-* Additional architecture layers
-* Custom state systems
-* Custom API frameworks
-
-unless repeated real usage justifies them.
-
----
-
-## 15. Testing Rules
-
-Tests should focus on behavior rather than implementation details.
-
-Frontend testing uses:
-
-* Vitest
-* React Testing Library
-* MSW
-
-Do not remove or weaken existing tests just to make a Ticket pass.
-
-When behavior changes, determine whether existing tests need to be updated or new tests added.
-
----
-
-## 16. Token and Context Efficiency
-
-The Agent must optimize for quality with minimal unnecessary context consumption.
-
-The Agent should:
-
-* Read only relevant documentation
-* Inspect only relevant code first
-* Reuse existing patterns
-* Avoid unnecessary exploration
-* Avoid unnecessary explanations
-* Avoid generating unused code
-* Avoid unrelated refactoring
-* Keep plans concise
-* Keep final reports structured
-
-Token efficiency must never reduce:
-
-* Correctness
-* Security
-* Required testing
-* Maintainability
-* Acceptance-criteria compliance
-
----
-
-## 17. Decision Escalation
-
-The Agent must not silently decide important unresolved matters.
-
-Stop and request approval when a task requires a new decision involving:
-
-* Architecture
-* Security
-* Authentication
-* Authorization
-* API design
-* Database design
-* Major dependency changes
-* Technology selection
-* Product behavior
-* Breaking changes
-
-For minor implementation details, use established project conventions and proceed.
-
----
-
-## 18. File Scope
-
-The Agent should identify the expected files before implementation whenever practical.
-
-The Agent must minimize file changes.
-
-After implementation, report:
-
-* Added files
-* Modified files
-* Deleted files
-
-Every non-obvious file modification should have a reason.
-
----
-
-## 19. Completion Report
-
-Every completed Ticket must end with:
-
-```text
-Status
-
-Implemented
-
-Files Added
-
-Files Modified
-
-Files Deleted
-
-Why Relevant Files Changed
-
-How to Run
-
-How to Test
-
-Validation Results
-
-Known Issues
-
-Next Suggested Ticket
-```
-
-The Agent must explicitly state when a validation step could not be performed.
-
----
-
-## 20. Definition of Done
-
-A Ticket is Done only when:
-
-* The requested scope is implemented.
-* Acceptance criteria are satisfied.
-* The project remains runnable.
-* Relevant tests pass.
-* Type checking passes when applicable.
-* Linting passes when applicable.
-* Build succeeds when applicable.
-* No unnecessary files were changed.
-* Changes have been reviewed.
-* Run instructions are provided.
-* Test instructions are provided.
-* Known issues are reported.
-
----
-
-## 21. Final Authority
-
-The project owner has final authority over:
-
-* Product decisions
-* Architecture decisions
-* Security decisions
-* API decisions
-* Technology choices
-* Scope changes
-
-The Agent should recommend improvements when appropriate but must not silently apply significant changes.
-
----
-
-## 22. Default Behavior
-
-When uncertain:
-
-1. Check project documentation.
-2. Check existing implementation patterns.
-3. Prefer the simplest established solution.
-4. Avoid unnecessary changes.
-5. Ask for approval only when the decision is important.
-6. Keep the project working after the Ticket.
-
----
-
-## 23. Validation Requirements
-
-* Application runs
-* Relevant tests pass
-* Type checking passes
-* Linting passes
-* Build passes when applicable
-
----
-
-## 24. Completion Report
-
-The Agent must report:
-
-* Status
-* Implemented changes
-* Added files
-* Modified files
-* Deleted files
-* Reasons for relevant changes
-* How to run
-* How to test
-* Validation results
-* Known issues
-* Next suggested Ticket
-
----
-
-## Sprint and Ticket Planning
-
-The project uses Sprints for planning and Tickets for execution.
-
-When the project owner provides a new requirement or feature request, the Agent should:
-
-1. Understand the requirement.
-2. Create or update the appropriate Sprint.
-3. Break the requirement into small, independently executable Tickets.
-4. Identify dependencies between Tickets.
-5. Identify Tickets that can be executed in parallel.
-6. Start with the first unblocked Ticket.
-
-The Agent must not attempt to implement an entire Sprint in one step.
-
-### Sprint
-
-A Sprint is a planning unit that groups related Tickets around a specific goal.
-
-A Sprint should contain:
-
-* Sprint goal
-* Tickets
-* Ticket dependencies
-* Parallelization opportunities
-* Completion criteria
-
-### Ticket
-
-A Ticket is the default execution unit.
-
-The project owner may provide only a requirement or feature description.
-
-The Agent is responsible for converting the requirement into a concise Ticket containing the necessary goal, scope, acceptance criteria, and validation requirements.
-
-### Execution
-
-Tickets must be implemented one at a time unless multiple independent Tickets are explicitly assigned to separate workers or agents.
-
-Every completed Ticket must leave the affected project implementation in a working and validated state.
-
-### Parallel Work
-
-Parallel execution is allowed only when Tickets have no blocking dependency.
-
-The Agent must identify dependencies before recommending parallel work.
-
-Integration work should occur after the required implementations are available.
-
-### Scope
-
-The Agent must not expand a Ticket into unrelated work.
-
-If completing the Ticket requires an important architectural or product decision, the Agent must request approval rather than silently changing the project direction.
-
----
-
-## Changelog Scope
-
-Each implementation must maintain its own `CHANGELOG.md`.
-
-The Changelog belongs inside the implementation directory:
-
-```text
-frontend-react/CHANGELOG.md
-frontend-vue/CHANGELOG.md
-backend-spring-boot/CHANGELOG.md
-backend-laravel/CHANGELOG.md
-```
-
-When a Ticket changes an implementation, the Agent must update only that implementation's Changelog.
-
-Examples:
-
-```text
-frontend-react/CHANGELOG.md
-```
-
-for React frontend changes.
-
-```text
-backend-spring-boot/CHANGELOG.md
-```
-
-for Spring Boot backend changes.
-
-The root repository must not contain a shared implementation Changelog.
-
-### Changelog Content
-
-The Changelog should contain concise, human-readable entries for meaningful changes.
-
-It should not duplicate detailed Git history or list every modified line.
-
-Each entry should identify the relevant Ticket when applicable.
-
-Example:
-
-```text
-## Unreleased
-
-### Added
-- [AUTH-003] Added login form and authentication state handling.
-
-### Changed
-- [AUTH-004] Updated authentication refresh flow.
-
-### Fixed
-- [AUTH-005] Fixed unauthorized redirect behavior.
-```
-
-The Agent must update the Changelog as part of completing a relevant Ticket.
-
--------------------------------------------------------------------------------------------
-
-# AGENTS.md
-
-## 1. Purpose
-
-This file defines the general operating rules for AI Agents working on this repository.
-
 The Agent is an implementation, planning, and review assistant.
 
 The Agent must follow the project's documented requirements, business rules, architecture, API contract, and development standards.
@@ -809,12 +102,16 @@ The general roadmap is maintained under:
 docs/roadmap/
 ```
 
-Implementation-specific Sprint files belong inside the relevant implementation:
+The general roadmap is maintained under:
 
-```text
-frontend-react/sprints/
-backend-<framework>/sprints/
-```
+docs/roadmap/
+
+GitHub Issues are the source of work for Sprints and Tickets.
+
+The repository-level roadmap defines the planned implementation order.
+GitHub Sprint Issues and Ticket Issues define the active execution work.
+
+Do not create or maintain implementation-specific sprint markdown files as a duplicate source of work.
 
 A Sprint should identify:
 
@@ -1139,3 +436,294 @@ When uncertain:
 5. Escalate important decisions.
 6. Keep the project working.
 7. Report the result clearly.
+
+---
+
+### Sprint Execution
+
+When a Sprint is selected:
+
+1. Read the Sprint GitHub Issue and applicable project documentation.
+2. Identify the next unblocked Ticket GitHub Issue labeled `ready`.
+3. Implement only that Ticket.
+4. Validate the implementation.
+5. Update the implementation CHANGELOG when required.
+6. Update the Ticket GitHub Issue with the result and apply `review`.
+7. Propose a Git commit message.
+8. Stop and wait for project-owner review.
+
+Do not automatically continue to the next Ticket unless explicitly instructed.
+
+### Ticket Planning
+
+When given a new client requirement or feature:
+
+1. Analyze the requirement.
+2. Create or update the appropriate Sprint GitHub Issue.
+3. Break it into small Ticket GitHub Issues.
+4. Link Tickets to the Sprint using GitHub Sub-issues when available.
+5. Identify dependencies and possible parallel work.
+6. Apply the appropriate GitHub labels.
+7. Do not implement until the Sprint plan is approved.
+
+The Agent should keep Sprint and Ticket plans concise.
+
+### GitHub Planning
+
+When a new requirement is planned:
+
+1. Create or update one Sprint GitHub Issue.
+2. Create one Ticket GitHub Issue for each executable Ticket.
+3. Link Ticket Issues to the Sprint Issue using GitHub Sub-issues when available.
+4. Apply the appropriate labels.
+5. Mark executable Tickets as `ready`.
+6. Identify dependencies and parallel work.
+7. Do not create duplicate local Ticket markdown files.
+
+The Sprint Issue is the planning container.
+Ticket Issues are the execution units.
+
+### Ticket Definition
+
+A Ticket should contain only:
+
+- ID
+- Title
+- Goal
+- Acceptance Criteria
+- Dependencies
+
+
+### Ticket Completion
+
+Every completed Ticket must leave the implementation runnable.
+
+The Agent must:
+
+- Run relevant validation.
+- Report actual results.
+- Report added, modified, and deleted files.
+- Explain non-obvious file changes.
+- Provide run/test commands.
+- Report known issues.
+- Update the implementation CHANGELOG when appropriate.
+- Update the Ticket GitHub Issue after validation.
+- Apply the `review` label.
+- Propose a focused Git commit message.
+
+
+### Minimal Change
+
+Modify only files necessary for the current Ticket.
+
+Do not perform unrelated refactoring, cleanup, renaming, formatting, dependency changes, or architecture changes.
+
+### Stop Conditions
+
+Stop and ask the project owner when:
+
+- an important architectural decision is required;
+- a security decision is required;
+- an API contract decision is required;
+- a technology/dependency decision is required;
+- the Ticket acceptance criteria are ambiguous;
+- a required change would expand the Ticket scope significantly.
+
+Do not silently make important decisions.
+
+### Validation
+
+Never claim a command passed unless it was actually executed.
+
+A Ticket is not complete if required validation could not be performed, unless the Agent explicitly reports why.
+
+### Changelog
+
+Each implementation maintains its own CHANGELOG.md.
+
+The Agent updates only the CHANGELOG belonging to the implementation being modified.
+
+### Sprint and Ticket Storage
+
+GitHub Issues are the source of work for Sprints and Tickets.
+
+Do not create or maintain implementation-specific `sprints/*.md` files as a duplicate source of Tickets.
+
+The repository-level roadmap under `docs/roadmap/` remains the high-level project plan.
+
+Sprint scope and Ticket execution details are maintained in GitHub Issues.
+
+---
+
+Execute the current Sprint one Ticket at a time.
+
+Follow AGENTS.md.
+
+For each Ticket:
+
+- implement it
+- validate it
+- update CHANGELOG when required
+- report the result
+
+Stop after each completed Ticket and wait for my approval before continuing.
+
+---
+
+## GitHub Issue Lifecycle
+
+GitHub Issues are the primary work-tracking mechanism for Sprints and Tickets.
+
+### Sprint
+
+A Sprint is represented by a GitHub Issue labeled:
+
+```text
+sprint
+```
+
+and implementation scope:
+
+```text
+frontend
+```
+
+or:
+```text
+backend
+
+```
+
+### Ticket
+
+Each Ticket is represented by a GitHub Issue labeled:
+
+```text
+ticket
+```
+
+and:
+
+```text
+frontend
+```
+
+or:
+
+```text
+backend
+```
+
+When GitHub Sub-issues are available, Tickets should be linked to their Sprint Issue as Sub-issues.
+
+### Ticket Labels
+
+Use these labels when applicable:
+
+```text
+
+sprint
+ticket
+frontend
+backend
+ready
+review
+blocked
+
+```
+
+Do not create duplicate or unnecessary labels.
+
+Use existing labels whenever possible.
+
+### Ticket Lifecycle
+
+A typical Ticket lifecycle is:
+
+```text
+ready
+  ↓
+in progress
+  ↓
+review
+  ↓
+done
+```
+
+`in progress` does not require a label unless the repository explicitly introduces one later. GitHub Issue state and comments may provide the necessary information.
+
+`blocked` should only be used when the Ticket cannot proceed because of a real dependency or unresolved decision.
+
+### Agent Execution
+
+When instructed to execute the current Sprint, the Agent should:
+
+1. Find the next unblocked Ticket GitHub Issue labeled `ready`.
+2. Read the Ticket Issue and relevant project documentation.
+3. Implement only that Ticket.
+4. Validate the implementation.
+5. Update the implementation CHANGELOG when required.
+6. Update the Ticket GitHub Issue with a concise completion summary.
+7. Remove `ready` and apply `review`.
+8. Propose a Git commit message.
+9. Stop and wait for project-owner review.
+
+The Agent must not automatically continue to the next Ticket.
+
+### Review
+
+After completing a Ticket, the Agent must wait for project-owner review.
+
+The Agent should not mark the Ticket complete based only on its own validation.
+
+The project owner may:
+
+* Approve the Ticket
+* Request changes
+* Mark the Ticket blocked
+* Close the Ticket when appropriate
+
+### Commit Suggestions
+
+After a Ticket passes validation, the Agent should propose a Git commit message.
+
+The Agent should not create or execute the commit automatically unless explicitly instructed.
+
+The proposed commit message should:
+
+* Clearly describe the change
+* Follow the repository's commit convention
+* Reference the Ticket when appropriate
+
+Example:
+
+```text
+feat(projects): add project creation form (#123)
+```
+
+### Commit Boundary
+
+Prefer one focused commit per logically complete Ticket unless the project owner explicitly chooses otherwise.
+
+Do not combine unrelated Tickets into one commit.
+
+### Scope Protection
+
+GitHub Issues represent the work scope.
+
+The Agent must not silently expand a Ticket because it discovers unrelated improvements.
+
+Unrelated improvements should become separate Tickets when appropriate.
+
+### GitHub Safety
+
+The Agent must:
+
+* Use the current repository only.
+* Never modify unrelated Issues.
+* Never close unrelated Issues.
+* Never change Ticket scope silently.
+* Never guess repository ownership.
+
+---
+

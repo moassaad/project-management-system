@@ -630,6 +630,7 @@ backend
 ready
 review
 blocked
+in progress
 
 ```
 
@@ -639,21 +640,41 @@ Use existing labels whenever possible.
 
 ### Ticket Lifecycle
 
-A typical Ticket lifecycle is:
+A Ticket follows this lifecycle:
 
-```text
 ready
-  ↓
-in progress
-  ↓
-review
-  ↓
-done
-```
+→ in progress
+→ review
+→ closed
 
-`in progress` does not require a label unless the repository explicitly introduces one later. GitHub Issue state and comments may provide the necessary information.
+Rules:
 
-`blocked` should only be used when the Ticket cannot proceed because of a real dependency or unresolved decision.
+- `ready`: Ticket is approved for implementation and ready to start.
+- `in progress`: Agent is currently implementing the Ticket.
+- `review`: Implementation is complete and waiting for project-owner approval.
+- `closed`: Ticket has been explicitly approved and completed.
+
+The Agent MUST update the GitHub Issue labels to reflect the current lifecycle state.
+
+When starting a Ticket:
+1. Remove `ready`.
+2. Remove `blocked` if its dependencies are satisfied.
+3. Apply `in progress`.
+
+When implementation is complete:
+1. Remove `in progress`.
+2. Apply `review`.
+3. Stop and wait for explicit project-owner approval.
+
+After approval:
+1. Remove `review`.
+2. Close the GitHub Issue.
+3. Identify the next executable Ticket.
+4. Remove `blocked` if all dependencies are satisfied.
+5. Apply `ready`.
+6. Begin implementation.
+7. Remove `ready`.
+8. Apply `in progress`.
 
 ### Agent Execution
 
@@ -689,6 +710,14 @@ After explicit approval of the current `review` Ticket, the Agent MUST:
 The Agent MUST NOT skip, delay, or manually request the `ready` label for an executable Ticket when its dependencies are already satisfied.
 
 The Agent MUST NOT consider a Ticket complete until its GitHub Issue is closed after approval.
+
+The Agent MUST mark the currently implemented Ticket as `in progress`.
+
+The Agent MUST NOT leave an actively implemented Ticket labeled only `ready`.
+
+The Agent MUST remove `review` from the approved Ticket before closing it.
+
+The Agent MUST NOT leave the approved Ticket open with the `review` label after explicit approval.
 
 ### Review
 

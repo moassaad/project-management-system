@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: backend-spring-boot
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.projectmanagementsystem: DEBUG
+    org.springframework: INFO
+
+# No datasource, JPA, Flyway, validation, or API config yet — placeholder for dev profile
+# Introduced in later Sprint 002 tickets

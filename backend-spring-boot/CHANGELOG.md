@@ -12,3 +12,6 @@ All notable changes to the Spring Boot backend (`backend-spring-boot/`) are docu
 - [BOOT-005] Add run instructions and initialize changelog — `README.md` + this CHANGELOG
 
 _Sprint 001 — Backend Bootstrap — bootstrap only; no database, JPA, Flyway, validation, RFC 9457, `/api/v1`, OpenAPI, or auth (deferred to Sprint 002+)._
+
+### Added (Sprint 002)
+- [BE-S002-01] Establish backend structure and environment profiles — `config/`, `common/`, `api/` packages (package-info) + `application-dev.yml` / `application-test.yml` placeholders (no datasource/domain)

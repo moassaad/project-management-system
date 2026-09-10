@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: backend-spring-boot
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.projectmanagementsystem: INFO
+    org.springframework: INFO
+
+# Test profile placeholder — no datasource, JPA, Flyway, or Testcontainers wiring yet
+# Introduced in later Sprint 002 tickets

@@ -111,7 +111,7 @@ GitHub Issues are the source of work for Sprints and Tickets.
 The repository-level roadmap defines the planned implementation order.
 GitHub Sprint Issues and Ticket Issues define the active execution work.
 
-Do not create or maintain implementation-specific sprint markdown files as a duplicate source of work.
+Do not create or maintain implementation-specific Sprint or Ticket markdown files as a duplicate source of work.
 
 A Sprint should identify:
 
@@ -464,7 +464,8 @@ When given a new client requirement or feature:
 4. Link Tickets to the Sprint using GitHub Sub-issues when available.
 5. Identify dependencies and possible parallel work.
 6. Apply the appropriate GitHub labels.
-7. Do not implement until the Sprint plan is approved.
+7. Wait for project-owner approval before marking Tickets as `ready` or beginning implementation.
+8. After approval, mark executable Tickets as `ready`.
 
 The Agent should keep Sprint and Ticket plans concise.
 
@@ -724,6 +725,55 @@ The Agent must:
 * Never close unrelated Issues.
 * Never change Ticket scope silently.
 * Never guess repository ownership.
+
+---
+
+### AI Roles
+
+#### AI General
+
+AI General operates from the repository root.
+
+Responsibilities:
+- Understand client requirements.
+- Analyze and clarify scope.
+- Create and maintain Sprint and Ticket GitHub Issues.
+- Identify dependencies and parallel work.
+- Update the roadmap when required.
+- Do not implement application code.
+
+#### AI App
+
+AI App operates from the relevant implementation directory.
+
+Responsibilities:
+- Execute one unblocked `ready` Ticket at a time.
+- Read applicable project documentation and AGENTS.md files.
+- Implement only the approved Ticket scope.
+- Run required validation and tests.
+- Update the implementation CHANGELOG.
+- Update the GitHub Ticket with the implementation result.
+- Change the Ticket label from `ready` to `review`.
+- Propose a focused commit message.
+- Stop and wait for human review.
+
+---
+
+### Human Review Boundary
+
+Human review is required after each completed Ticket.
+
+The Agent must:
+1. Stop after completing the Ticket.
+2. Report the implementation and validation results.
+3. Change the Ticket status/label to `review`.
+4. Propose a commit message.
+5. Wait for project-owner review.
+
+The Agent must not:
+- Start the next Ticket automatically.
+- Commit or push automatically.
+- Expand the Ticket scope without approval.
 
 ---
 

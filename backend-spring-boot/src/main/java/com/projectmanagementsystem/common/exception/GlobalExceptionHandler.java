@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.projectmanagementsystem.auth.exception.InvalidCredentialsException;
+import com.projectmanagementsystem.auth.exception.InvalidRefreshTokenException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -116,6 +117,16 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.UNAUTHORIZED,
                 "Invalid email or password");
+        problem.setType(TYPE_UNAUTHORIZED);
+        problem.setTitle("Unauthorized");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ProblemDetail handleInvalidRefreshToken(InvalidRefreshTokenException ex, HttpServletRequest request) {
+        String detail = ex.getMessage() != null ? ex.getMessage() : "Invalid or expired refresh token";
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, detail);
         problem.setType(TYPE_UNAUTHORIZED);
         problem.setTitle("Unauthorized");
         problem.setInstance(URI.create(request.getRequestURI()));

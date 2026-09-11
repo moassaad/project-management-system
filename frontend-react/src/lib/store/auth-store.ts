@@ -28,21 +28,27 @@ type AuthState = {
   user: User | null
   /** Derived from presence of accessToken; UX-only flag (backend is authoritative). */
   isAuthenticated: boolean
+  /** Bootstrap loading — true while attempting refresh on app load. */
+  isBootstrapping: boolean
   /** Store auth (user + token) — memory only. */
   setAuth: (user: User, token: string) => void
   /** Legacy alias — store token only (kept for compat). */
   setAccessToken: (token: string) => void
   /** Clear authentication (logout / session expiry). */
   clearAuth: () => void
+  /** Set bootstrapping flag. */
+  setBootstrapping: (value: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   user: null,
   isAuthenticated: false,
+  isBootstrapping: true,
   setAuth: (user: User, token: string) =>
     set({ user, accessToken: token, isAuthenticated: true }),
   setAccessToken: (token: string) =>
     set({ accessToken: token, isAuthenticated: true }),
   clearAuth: () => set({ accessToken: null, user: null, isAuthenticated: false }),
+  setBootstrapping: (value: boolean) => set({ isBootstrapping: value }),
 }))

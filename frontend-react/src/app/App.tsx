@@ -1,11 +1,15 @@
 import { NavLink, Outlet } from 'react-router'
 
+import { Button } from '../components/ui/Button.tsx'
 import {
   Layout,
   LayoutHeader,
   LayoutMain,
   LayoutSidebar,
 } from '../components/ui/Layout.tsx'
+import { useAuthBootstrap } from '../features/auth/hooks/useAuthBootstrap.ts'
+import { useLogoutMutation } from '../features/auth/hooks/useLogoutMutation.ts'
+import { useAuthStore } from '../features/auth/store/authStore.ts'
 
 /**
  * Application layout — wraps routes with header/sidebar placeholder.
@@ -14,6 +18,21 @@ import {
  * Used as parent route element in src/app/router/index.tsx so layout renders on all routes.
  */
 export function App() {
+  const { isBootstrapping } = useAuthBootstrap()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const logoutMutation = useLogoutMutation()
+
+  if (isBootstrapping) {
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center bg-gray-50"
+        aria-label="Loading application"
+      >
+        <p className="text-sm text-gray-500">Loading…</p>
+      </div>
+    )
+  }
+
   return (
     <Layout>
       <LayoutHeader>
@@ -59,6 +78,19 @@ export function App() {
                   Login
                 </NavLink>
               </li>
+              {isAuthenticated ? (
+                <li>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => logoutMutation.mutate()}
+                    disabled={logoutMutation.isPending}
+                    aria-label="Logout"
+                  >
+                    {logoutMutation.isPending ? 'Logging out…' : 'Logout'}
+                  </Button>
+                </li>
+              ) : null}
             </ul>
           </nav>
         </div>
@@ -104,6 +136,20 @@ export function App() {
                   Login
                 </NavLink>
               </li>
+              {isAuthenticated ? (
+                <li>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => logoutMutation.mutate()}
+                    disabled={logoutMutation.isPending}
+                    aria-label="Logout"
+                    className="w-full justify-start"
+                  >
+                    {logoutMutation.isPending ? 'Logging out…' : 'Logout'}
+                  </Button>
+                </li>
+              ) : null}
             </ul>
           </nav>
         </LayoutSidebar>

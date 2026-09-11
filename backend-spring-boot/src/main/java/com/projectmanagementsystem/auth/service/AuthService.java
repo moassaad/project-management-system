@@ -90,4 +90,31 @@ public class AuthService {
         refreshTokenService.store(user, newRefresh);
         return new RefreshResult(newAccess, newRefresh);
     }
+
+    @Transactional
+    public void logout(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return;
+        }
+        refreshTokenService.findByToken(refreshToken).ifPresent(rt -> {
+            // Revoke and delete to invalidate
+            refreshTokenService.revoke(rt);
+        });
+        // Also try to parse userId for chain cleanup if needed, but not required for idempotent
+        try {
+            if (jwtService.isValid(refreshToken) && jwtService.isRefreshToken(refreshToken)) {
+                UUID jti = jwtService.getJti(refreshToken);
+                if (jti != null) {
+                    refreshTokenService.findByJti(jti).ifPresent(rt -> refreshTokenService.revoke(rt));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public User getMe(UUID userId) {
+        return users.findById(userId)
+                .orElseThrow(() -> new InvalidRefreshTokenException("User not found"));
+    }
 }

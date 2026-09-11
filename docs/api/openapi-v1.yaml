@@ -32,6 +32,22 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - auth
+      summary: Logout
+      description: Clears refresh cookie and invalidates stored refresh
+      operationId: logout
+      parameters:
+      - name: refreshToken
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
   /api/v1/auth/login:
     post:
       tags:
@@ -70,6 +86,23 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+  /api/v1/auth/me:
+    get:
+      tags:
+      - auth
+      summary: Current user
+      description: Returns current authenticated user
+      operationId: me
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties: {}
 components:
   schemas:
     LoginRequest:

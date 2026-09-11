@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.projectmanagementsystem.auth.exception.InvalidCredentialsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -28,6 +29,7 @@ public class GlobalExceptionHandler {
     private static final URI TYPE_VALIDATION_ERROR = URI.create("https://api.example.com/problems/validation-error");
     private static final URI TYPE_CONSTRAINT_VIOLATION = URI.create("https://api.example.com/problems/constraint-violation");
     private static final URI TYPE_RESOURCE_NOT_FOUND = URI.create("https://api.example.com/problems/resource-not-found");
+    private static final URI TYPE_UNAUTHORIZED = URI.create("https://api.example.com/problems/unauthorized");
     private static final URI TYPE_INTERNAL_ERROR = URI.create("https://api.example.com/problems/internal-server-error");
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -105,6 +107,17 @@ public class GlobalExceptionHandler {
                 "The requested resource was not found.");
         problem.setType(TYPE_RESOURCE_NOT_FOUND);
         problem.setTitle("Resource not found");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ProblemDetail handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNAUTHORIZED,
+                "Invalid email or password");
+        problem.setType(TYPE_UNAUTHORIZED);
+        problem.setTitle("Unauthorized");
         problem.setInstance(URI.create(request.getRequestURI()));
         return problem;
     }

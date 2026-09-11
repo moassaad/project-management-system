@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 
+import { App } from '../App.tsx'
 import {
   DashboardPage,
   LoginPage,
@@ -12,22 +13,27 @@ import { ProtectedRoute } from './protected-route.tsx'
 import { PublicRoute } from './public-route.tsx'
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/dashboard" replace /> },
   {
-    element: <PublicRoute />,
-    children: [{ path: '/login', element: <LoginPage /> }],
-  },
-  {
-    element: <ProtectedRoute />,
+    element: <App />,
     children: [
-      { path: '/dashboard', element: <DashboardPage /> },
-      { path: '/projects', element: <ProjectsPage /> },
-      { path: '/projects/:projectId', element: <ProjectDetailsPage /> },
+      { path: '/', element: <Navigate to="/dashboard" replace /> },
       {
-        path: '/projects/:projectId/tasks/:taskId',
-        element: <TaskDetailsPage />,
+        element: <PublicRoute />,
+        children: [{ path: '/login', element: <LoginPage /> }],
       },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/projects', element: <ProjectsPage /> },
+          { path: '/projects/:projectId', element: <ProjectDetailsPage /> },
+          {
+            path: '/projects/:projectId/tasks/:taskId',
+            element: <TaskDetailsPage />,
+          },
+        ],
+      },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
-  { path: '*', element: <NotFoundPage /> },
 ])

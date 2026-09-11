@@ -1,7 +1,3 @@
-export function LoginPage() {
-  return <div>Login</div>
-}
-
 export function DashboardPage() {
   return <div>Dashboard</div>
 }

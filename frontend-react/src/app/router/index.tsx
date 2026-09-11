@@ -1,9 +1,9 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 
 import { App } from '../App.tsx'
+import { LoginPage } from '../../features/auth/pages/LoginPage.tsx'
 import {
   DashboardPage,
-  LoginPage,
   NotFoundPage,
   ProjectDetailsPage,
   ProjectsPage,

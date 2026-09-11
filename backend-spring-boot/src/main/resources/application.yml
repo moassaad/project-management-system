@@ -23,6 +23,15 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-must-be-at-least-64-bytes-long-for-hs512-change-me-in-prod-0123456789}
+    access-expiration: 900000
+    refresh-expiration: 604800000
+  seed:
+    email: ${SEED_USER_EMAIL:}
+    password: ${SEED_USER_PASSWORD:}
+
 springdoc:
   api-docs:
     path: /v3/api-docs

@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 
+import type { User } from '../../features/auth/types/auth.types.ts'
+
 /**
- * Shared client state for authentication — memory-only Access Token.
+ * Shared client state for authentication — memory-only Access Token + User.
  *
  * State Ownership Rule (per docs/architecture/system-architecture.md:453-531):
  *  - Server State → TanStack Query (projects/tasks/comments fetched from API)
@@ -10,7 +12,7 @@ import { create } from 'zustand'
  *
  * Anti-duplication rule: server-owned data (projects/tasks) must remain in
  * TanStack Query and must NOT be duplicated into Zustand. This store holds only
- * client-owned `accessToken` and derived `isAuthenticated`.
+ * client-owned `accessToken`/`user` and derived `isAuthenticated`.
  *
  * Token Storage Strategy (per docs/api/api-design.md:556):
  *  - `accessToken` lives only in frontend memory (never persisted).
@@ -22,18 +24,31 @@ import { create } from 'zustand'
 type AuthState = {
   /** Access token in memory only; null when unauthenticated. */
   accessToken: string | null
+  /** Authenticated user, null when unauthenticated. */
+  user: User | null
   /** Derived from presence of accessToken; UX-only flag (backend is authoritative). */
   isAuthenticated: boolean
-  /** Store a new access token (memory only). */
+  /** Bootstrap loading — true while attempting refresh on app load. */
+  isBootstrapping: boolean
+  /** Store auth (user + token) — memory only. */
+  setAuth: (user: User, token: string) => void
+  /** Legacy alias — store token only (kept for compat). */
   setAccessToken: (token: string) => void
   /** Clear authentication (logout / session expiry). */
   clearAuth: () => void
+  /** Set bootstrapping flag. */
+  setBootstrapping: (value: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
+  user: null,
   isAuthenticated: false,
+  isBootstrapping: true,
+  setAuth: (user: User, token: string) =>
+    set({ user, accessToken: token, isAuthenticated: true }),
   setAccessToken: (token: string) =>
     set({ accessToken: token, isAuthenticated: true }),
-  clearAuth: () => set({ accessToken: null, isAuthenticated: false }),
+  clearAuth: () => set({ accessToken: null, user: null, isAuthenticated: false }),
+  setBootstrapping: (value: boolean) => set({ isBootstrapping: value }),
 }))

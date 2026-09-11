@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: backend-spring-boot
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pms
+    username: pms
+    password: pms
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.projectmanagementsystem: DEBUG
+    org.springframework: INFO
+
+# Dev profile keeps localhost PostgreSQL; override via SPRING_DATASOURCE_* env if needed
+# JPA/Flyway persistence foundation introduced in BE-S002-03 (validate + baseline)

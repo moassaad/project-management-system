@@ -590,9 +590,9 @@ frontend
 ```
 
 or:
+
 ```text
 backend
-
 ```
 
 ### Ticket
@@ -622,7 +622,6 @@ When GitHub Sub-issues are available, Tickets should be linked to their Sprint I
 Use these labels when applicable:
 
 ```text
-
 sprint
 ticket
 frontend
@@ -630,7 +629,7 @@ backend
 ready
 review
 blocked
-
+in progress
 ```
 
 Do not create duplicate or unnecessary labels.
@@ -639,141 +638,199 @@ Use existing labels whenever possible.
 
 ### Ticket Lifecycle
 
-A typical Ticket lifecycle is:
+A Ticket follows this lifecycle:
 
 ```text
+blocked
+   ↓
 ready
-  ↓
+   ↓
 in progress
-  ↓
+   ↓
 review
-  ↓
-done
+   ↓
+closed
 ```
 
-`in progress` does not require a label unless the repository explicitly introduces one later. GitHub Issue state and comments may provide the necessary information.
+Definitions:
 
-`blocked` should only be used when the Ticket cannot proceed because of a real dependency or unresolved decision.
+* `blocked` = Ticket cannot currently be implemented because one or more dependencies are incomplete.
+* `ready` = Ticket is approved and all dependencies required for implementation are satisfied.
+* `in progress` = Agent is currently implementing the Ticket.
+* `review` = Implementation is complete and waiting for project-owner approval.
+* `closed` = Ticket has been explicitly approved and completed.
+
+The Agent MUST update GitHub Issue labels to reflect the current lifecycle state.
+
+### When Starting a Ticket
+
+When the Agent begins implementation of a Ticket:
+
+1. Remove `ready`.
+2. Remove `blocked` if it is still present and all dependencies are satisfied.
+3. Apply `in progress`.
+
+The actively implemented Ticket MUST have `in progress`.
+
+The Agent MUST NOT leave an actively implemented Ticket labeled only `ready`.
+
+### When Implementation Is Complete
+
+After implementation and validation are complete:
+
+1. Update the implementation CHANGELOG when required.
+2. Update the Ticket GitHub Issue with a concise completion summary.
+3. Remove `in progress`.
+4. Apply `review`.
+5. Stop and wait for project-owner approval.
+
+The completed Ticket MUST remain open while it is in `review`.
+
+### After Project-Owner Approval
+
+When the project owner explicitly approves the current Ticket using:
+
+* `approved`
+* `approval`
+* `done`
+
+the Agent MUST:
+
+1. Verify that the approved Ticket is the current Ticket awaiting review.
+2. Remove `review`.
+3. Close the approved Ticket GitHub Issue.
+4. Identify the next Ticket in the same implementation area.
+5. Check whether its dependencies are satisfied.
+
+If the next Ticket has all dependencies completed:
+
+1. Remove `blocked` if present.
+2. Apply `ready`.
+3. Begin implementation.
+4. Remove `ready`.
+5. Apply `in progress`.
+6. Implement only that Ticket.
+7. Validate it.
+8. Update CHANGELOG when required.
+9. Update the Ticket GitHub Issue.
+10. Remove `in progress`.
+11. Apply `review`.
+12. Stop and wait for project-owner approval again.
+
+If the next Ticket still has incomplete dependencies:
+
+1. Keep `blocked`.
+2. Do not apply `ready`.
+3. Continue searching for the next executable Ticket in the same implementation area.
+
+When another executable Ticket is found:
+
+1. Remove `blocked` if present and its dependencies are satisfied.
+2. Apply `ready`.
+3. Begin implementation.
+4. Continue using the same lifecycle.
+
+If no executable Ticket exists, stop and report that there is no currently executable Ticket.
+
+### Automatic State Progression
+
+The Agent is responsible for automatically maintaining Ticket state.
+
+The Agent MUST NOT wait for the project owner to manually apply `ready` when a Ticket is executable.
+
+When a Ticket becomes executable because all dependencies are completed, the Agent MUST:
+
+```text
+blocked → ready
+```
+
+When the Agent starts that Ticket:
+
+```text
+ready → in progress
+```
+
+When implementation is complete:
+
+```text
+in progress → review
+```
+
+After explicit approval:
+
+```text
+review → closed
+```
 
 ### Agent Execution
 
-When instructed to execute the current Sprint, the Agent should:
+When instructed to execute the current Sprint, the Agent MUST:
 
-1. Find the next unblocked Ticket GitHub Issue labeled `ready`.
-2. Read the Ticket Issue and relevant project documentation.
-3. Implement only that Ticket.
-4. Validate the implementation.
-5. Update the implementation CHANGELOG when required.
-6. Update the Ticket GitHub Issue with a concise completion summary.
-7. Remove `ready` and apply `review`.
-8. Propose a Git commit message.
-9. Stop and wait for project-owner review.
+1. Determine the current implementation area from the working directory and Ticket scope.
+2. Read the current Sprint Issue.
+3. Find the next executable Ticket in that implementation area.
+4. A Ticket is executable only when:
 
-The Agent must not automatically continue to the next Ticket.
+   * it is open;
+   * it is not blocked, or its dependencies are now satisfied;
+   * all required dependencies are completed;
+   * it belongs to the current implementation area.
+5. If the Ticket is executable and lacks `ready`, apply `ready`.
+6. Mark the Ticket `in progress`.
+7. Read the Ticket and relevant project documentation.
+8. Implement only that Ticket.
+9. Validate the implementation.
+10. Update the implementation CHANGELOG when required.
+11. Update the Ticket GitHub Issue with the implementation result and validation.
+12. Remove `in progress`.
+13. Apply `review`.
+14. Stop and wait for explicit project-owner approval.
 
-### Review
+The Agent MUST implement only one Ticket at a time.
 
-After completing a Ticket, the Agent must wait for project-owner review.
+The Agent MUST NOT start another Ticket while the current Ticket is in `review`.
 
-The Agent should not mark the Ticket complete based only on its own validation.
+### Approval Boundary
 
-The project owner may:
+Human review is required after every completed Ticket.
 
-* Approve the Ticket
-* Request changes
-* Mark the Ticket blocked
-* Close the Ticket when appropriate
-
-### Commit Suggestions
-
-After a Ticket passes validation, the Agent should propose a Git commit message.
-
-The Agent should not create or execute the commit automatically unless explicitly instructed.
-
-The proposed commit message should:
-
-* Clearly describe the change
-* Follow the repository's commit convention
-* Reference the Ticket when appropriate
-
-Example:
+Approval of the current Ticket means:
 
 ```text
-feat(projects): add project creation form (#123)
+review → closed
 ```
 
-### Commit Boundary
+and authorizes the Agent to continue to the next executable Ticket.
 
-Prefer one focused commit per logically complete Ticket unless the project owner explicitly chooses otherwise.
+The Agent MUST NOT interpret unrelated user messages as approval.
 
-Do not combine unrelated Tickets into one commit.
+Approval applies only to the current Ticket awaiting review.
 
 ### Scope Protection
 
-GitHub Issues represent the work scope.
+The Agent must never modify unrelated Issues.
 
-The Agent must not silently expand a Ticket because it discovers unrelated improvements.
+The Agent must never close unrelated Issues.
 
-Unrelated improvements should become separate Tickets when appropriate.
+The Agent must never silently change Ticket scope.
 
-### GitHub Safety
+The Agent must never change dependencies unless explicitly authorized.
 
-The Agent must:
+### Sprint Completion
 
-* Use the current repository only.
-* Never modify unrelated Issues.
-* Never close unrelated Issues.
-* Never change Ticket scope silently.
-* Never guess repository ownership.
+The Sprint Issue should remain open while related Tickets are incomplete.
+
+The Sprint Issue may be considered complete only after all related Tickets are closed, unless the project owner explicitly changes the rule.
 
 ---
 
-### AI Roles
+After implementation:
 
-#### AI General
+Run the required validation.
+Update the CHANGELOG when required.
+Update the GitHub Ticket.
+Apply the appropriate GitHub labels.
+Propose a focused commit message.
+Stop and wait for explicit human approval.
 
-AI General operates from the repository root.
-
-Responsibilities:
-- Understand client requirements.
-- Analyze and clarify scope.
-- Create and maintain Sprint and Ticket GitHub Issues.
-- Identify dependencies and parallel work.
-- Update the roadmap when required.
-- Do not implement application code.
-
-#### AI App
-
-AI App operates from the relevant implementation directory.
-
-Responsibilities:
-- Execute one unblocked `ready` Ticket at a time.
-- Read applicable project documentation and AGENTS.md files.
-- Implement only the approved Ticket scope.
-- Run required validation and tests.
-- Update the implementation CHANGELOG.
-- Update the GitHub Ticket with the implementation result.
-- Change the Ticket label from `ready` to `review`.
-- Propose a focused commit message.
-- Stop and wait for human review.
-
----
-
-### Human Review Boundary
-
-Human review is required after each completed Ticket.
-
-The Agent must:
-1. Stop after completing the Ticket.
-2. Report the implementation and validation results.
-3. Change the Ticket status/label to `review`.
-4. Propose a commit message.
-5. Wait for project-owner review.
-
-The Agent must not:
-- Start the next Ticket automatically.
-- Commit or push automatically.
-- Expand the Ticket scope without approval.
-
----
-
+Do not implement another Ticket before approval.

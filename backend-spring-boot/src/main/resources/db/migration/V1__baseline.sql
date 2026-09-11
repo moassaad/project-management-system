@@ -1,0 +1,4 @@
+-- V1 Baseline — persistence foundation only, no domain tables
+-- Provides pgcrypto for UUID generation if needed in future migrations (PostgreSQL)
+-- H2 compatibility: pgcrypto not required for baseline; skipped in test profile
+-- Baseline intentionally empty — no domain tables

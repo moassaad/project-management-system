@@ -34,7 +34,7 @@ class OpenApiTest {
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.openapi").value("3.1.0"))
                 .andExpect(jsonPath("$.info.title").value("Project Management System"))
-                .andExpect(jsonPath("$.servers[0].url").value("/api/v1"))
+                .andExpect(jsonPath("$.servers[0].url").value("/"))
                 .andExpect(jsonPath("$.paths['/api/v1/health'].get").exists());
         // ProblemDetail schemas may be under components.schemas with different naming; check at least that some schema exists or health is documented
     }

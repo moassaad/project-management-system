@@ -21,7 +21,9 @@ public class OpenApiConfig {
                         .title("Project Management System")
                         .version("v1")
                         .description("Project Management System API — generated from code, not manually edited"))
-                .servers(List.of(new Server().url("/api/v1")))
+                // Server must be "/" not "/api/v1" — paths already include /api/v1 via @RequestMapping,
+                // otherwise swagger-ui Try-It-Out constructs double prefix /api/v1/api/v1/...
+                .servers(List.of(new Server().url("/")))
                 .openapi("3.1.0");
     }
 }

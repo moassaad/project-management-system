@@ -16,6 +16,7 @@ import com.projectmanagementsystem.project.entity.ProjectMember;
 import com.projectmanagementsystem.project.exception.ProjectForbiddenException;
 import com.projectmanagementsystem.project.repository.ProjectMemberRepository;
 import com.projectmanagementsystem.project.repository.ProjectRepository;
+import com.projectmanagementsystem.task.repository.TaskRepository;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -35,13 +36,16 @@ public class ProjectService {
     private final ProjectRepository projects;
     private final ProjectMemberRepository members;
     private final UserRepository users;
+    private final TaskRepository tasks;
 
     public ProjectService(ProjectRepository projects,
                           ProjectMemberRepository members,
-                          UserRepository users) {
+                          UserRepository users,
+                          TaskRepository tasks) {
         this.projects = projects;
         this.members = members;
         this.users = users;
+        this.tasks = tasks;
     }
 
     public record ProjectPage(List<ProjectResponse> data, long total) {}
@@ -145,11 +149,12 @@ public class ProjectService {
     }
 
     /**
-     * Hook after member removal — Sprint 007 wires task assignee-clearing here.
-     * No task tables exist yet, so this is intentionally a no-op.
+     * After member removal — unassigns the removed member's tasks
+     * (tasks are kept, assignee set to NULL) per business rules.
      */
     protected void onMemberRemoved(UUID projectId, UUID targetUserId) {
-        // Sprint 007: unassign tasks of targetUserId in projectId.
+        tasks.findByProjectIdAndAssigneeId(projectId, targetUserId)
+                .forEach(task -> task.setAssignee(null));
     }
 
     private User resolveUser(AddProjectMemberRequest req) {

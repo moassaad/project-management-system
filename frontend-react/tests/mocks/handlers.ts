@@ -59,4 +59,89 @@ export const handlers = [
       { status: 401, headers: { 'Content-Type': 'application/problem+json' } },
     )
   }),
+
+  // Projects mocks — behavior-focused, paginated, aligned with project types
+  ...(() => {
+    const projects = [
+      {
+        id: '00000000-0000-4000-a000-000000000010',
+        name: 'Alpha Project',
+        description: 'First project',
+        ownerId: '00000000-0000-4000-a000-000000000001',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: '00000000-0000-4000-a000-000000000020',
+        name: 'Beta Project',
+        description: null,
+        ownerId: '00000000-0000-4000-a000-000000000001',
+        createdAt: new Date().toISOString(),
+      },
+    ]
+    return [
+      http.get('*/api/v1/projects', ({ request }) => {
+        const url = new URL(request.url)
+        const page = Number(url.searchParams.get('page') ?? '1')
+        const perPage = Number(url.searchParams.get('perPage') ?? '20')
+        const start = (page - 1) * perPage
+        const slice = projects.slice(start, start + perPage)
+        return HttpResponse.json({
+          data: slice,
+          meta: { currentPage: page, perPage, total: projects.length, lastPage: Math.ceil(projects.length / perPage) || 1 },
+        })
+      }),
+      http.get('*/api/v1/projects/:projectId', ({ params }) => {
+        const found = projects.find((p) => p.id === params.projectId)
+        if (!found) {
+          return HttpResponse.json(
+            { type: 'https://api.example.com/problems/not-found', title: 'Not found', status: 404, detail: 'Project not found', instance: `/api/v1/projects/${params.projectId}` },
+            { status: 404, headers: { 'Content-Type': 'application/problem+json' } },
+          )
+        }
+        return HttpResponse.json({ data: found })
+      }),
+      http.post('*/api/v1/projects', async ({ request }) => {
+        const body = (await request.json()) as { name?: string; description?: string }
+        if (!body.name) {
+          return HttpResponse.json(
+            { type: 'https://api.example.com/problems/validation-error', title: 'Validation failed', status: 422, detail: 'Invalid', errors: [{ detail: 'Name required', pointer: '#/name' }] },
+            { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+          )
+        }
+        const created = {
+          id: '00000000-0000-4000-a000-000000000030',
+          name: body.name,
+          description: body.description ?? null,
+          ownerId: '00000000-0000-4000-a000-000000000001',
+          createdAt: new Date().toISOString(),
+        }
+        projects.push(created)
+        return HttpResponse.json({ data: created }, { status: 201 })
+      }),
+      http.patch('*/api/v1/projects/:projectId', async ({ params, request }) => {
+        const body = (await request.json()) as { name?: string; description?: string }
+        const found = projects.find((p) => p.id === params.projectId)
+        if (!found) {
+          return HttpResponse.json(
+            { type: 'https://api.example.com/problems/not-found', title: 'Not found', status: 404, detail: 'Project not found', instance: `/api/v1/projects/${params.projectId}` },
+            { status: 404, headers: { 'Content-Type': 'application/problem+json' } },
+          )
+        }
+        if (body.name !== undefined) found.name = body.name
+        if (body.description !== undefined) found.description = body.description
+        return HttpResponse.json({ data: found })
+      }),
+      http.delete('*/api/v1/projects/:projectId', ({ params }) => {
+        const idx = projects.findIndex((p) => p.id === params.projectId)
+        if (idx === -1) {
+          return HttpResponse.json(
+            { type: 'https://api.example.com/problems/not-found', title: 'Not found', status: 404, detail: 'Project not found', instance: `/api/v1/projects/${params.projectId}` },
+            { status: 404, headers: { 'Content-Type': 'application/problem+json' } },
+          )
+        }
+        projects.splice(idx, 1)
+        return new HttpResponse(null, { status: 204 })
+      }),
+    ]
+  })(),
 ]

@@ -277,6 +277,30 @@ paths:
                 additionalProperties:
                   type: object
                   additionalProperties: {}
+  /api/v1/projects/{projectId}/members/{userId}:
+    delete:
+      tags:
+      - project-members
+      summary: Remove project member
+      description: "Removes a member with immediate access loss; owner only, owner\
+        \ cannot be removed"
+      operationId: remove
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
 components:
   schemas:
     CreateProjectRequest:

@@ -18,6 +18,7 @@ function getStatus(error: unknown): number | undefined {
 }
 
 function errorMessage(status: number | undefined): string {
+  if (status === 400) return 'Invalid filter values. Please adjust the filters and try again.'
   if (status === 401) return 'You are not authenticated. Please sign in again.'
   if (status === 403) return 'You do not have access to these tasks.'
   if (status === 404) return 'Project not found.'
@@ -150,7 +151,7 @@ export function TasksPage() {
     return (
       <section aria-label="Tasks">
         <h1 className="text-2xl font-semibold text-gray-900">Tasks</h1>
-        <div aria-label="Loading tasks" className="mt-4 space-y-3">
+        <div role="status" aria-label="Loading tasks" className="mt-4 space-y-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-100" aria-hidden="true" />
           ))}
@@ -218,6 +219,11 @@ export function TasksPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-semibold text-gray-900">Tasks</h1>
       {filterControls}
+      {meta ? (
+        <p className="mt-3 text-sm text-gray-500" aria-live="polite">
+          Showing {tasks.length} of {meta.total} tasks
+        </p>
+      ) : null}
       <ul className="mt-4 space-y-3">
         {tasks.map((task) => (
           <li key={task.id}>

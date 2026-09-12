@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Button } from '../../../components/ui/Button.tsx'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card.tsx'
 import { useAuthStore } from '../../auth/store/authStore.ts'
+import { CommentsSection } from '../../comments/components/CommentsSection.tsx'
 import { useProjectQuery } from '../../projects/hooks/useProjectsQueries.ts'
 import { useDeleteTaskMutation, useTaskQuery } from '../hooks/useTasksQueries.ts'
 import { TaskBadges } from '../components/TaskBadges.tsx'
@@ -164,6 +165,7 @@ export function TaskDetailsPage() {
           ) : null}
         </CardContent>
       </Card>
+      <CommentsSection projectId={projectId} taskId={taskId} />
       {canModify && confirmingDelete ? (
         <div
           role="alertdialog"

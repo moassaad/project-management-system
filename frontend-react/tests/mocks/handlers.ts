@@ -355,4 +355,60 @@ export const handlers = [
       }),
     ]
   })(),
+
+  // Comments mocks — behavior-focused, contract-first for Sprint 008
+  // (backend BE-S008-02 not yet built). Comment {id,content,authorId,createdAt},
+  // list is plain {data} like members; content required (422 with #/content).
+  ...(() => {
+    const ALPHA = '00000000-0000-4000-a000-000000000010'
+    const TASK_A10 = '00000000-0000-4000-a000-000000000a10'
+    const OWNER = '00000000-0000-4000-a000-000000000001'
+    const MEMBER = '00000000-0000-4000-a000-000000000002'
+    type MockComment = { id: string; content: string; authorId: string; createdAt: string }
+    const now = new Date().toISOString()
+    const commentsByTask: Record<string, MockComment[]> = {
+      [`${ALPHA}:${TASK_A10}`]: [
+        { id: '00000000-0000-4000-a000-000000000c10', content: 'API integration is complete.', authorId: OWNER, createdAt: now },
+        { id: '00000000-0000-4000-a000-000000000c20', content: 'Reviewed, looks good.', authorId: MEMBER, createdAt: now },
+      ],
+    }
+    const problem = (type: string, title: string, status: number, detail: string, instance: string, extra?: Record<string, unknown>) =>
+      HttpResponse.json(
+        { type: `https://api.example.com/problems/${type}`, title, status, detail, instance, ...extra },
+        { status, headers: { 'Content-Type': 'application/problem+json' } },
+      )
+    return [
+      http.get('*/api/v1/projects/:projectId/tasks/:taskId/comments', ({ params }) => {
+        const key = `${params.projectId as string}:${params.taskId as string}`
+        const list = commentsByTask[key]
+        if (!list) {
+          return problem('not-found', 'Not found', 404, 'Task not found', `/api/v1/projects/${params.projectId}/tasks/${params.taskId}/comments`)
+        }
+        return HttpResponse.json({ data: list })
+      }),
+      http.post('*/api/v1/projects/:projectId/tasks/:taskId/comments', async ({ params, request }) => {
+        const projectId = params.projectId as string
+        const taskId = params.taskId as string
+        const key = `${projectId}:${taskId}`
+        const list = commentsByTask[key]
+        if (!list) {
+          return problem('not-found', 'Not found', 404, 'Task not found', `/api/v1/projects/${projectId}/tasks/${taskId}/comments`)
+        }
+        const body = (await request.json()) as { content?: string }
+        if (!body.content) {
+          return problem('validation-error', 'Validation failed', 422, 'Invalid comment', `/api/v1/projects/${projectId}/tasks/${taskId}/comments`, {
+            errors: [{ detail: 'Comment content required', pointer: '#/content' }],
+          })
+        }
+        const created: MockComment = {
+          id: '00000000-0000-4000-a000-000000000c30',
+          content: body.content,
+          authorId: OWNER,
+          createdAt: new Date().toISOString(),
+        }
+        list.push(created)
+        return HttpResponse.json({ data: created }, { status: 201 })
+      }),
+    ]
+  })(),
 ]

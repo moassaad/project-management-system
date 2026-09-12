@@ -3,8 +3,13 @@ package com.projectmanagementsystem.project.service;
 import com.projectmanagementsystem.auth.entity.User;
 import com.projectmanagementsystem.auth.repository.UserRepository;
 import com.projectmanagementsystem.common.exception.ResourceNotFoundException;
+import com.projectmanagementsystem.project.dto.AddProjectMemberRequest;
+import com.projectmanagementsystem.project.dto.AddProjectMemberResponse;
 import com.projectmanagementsystem.project.dto.CreateProjectRequest;
+import com.projectmanagementsystem.project.dto.ProjectMemberResponse;
 import com.projectmanagementsystem.project.dto.ProjectResponse;
+import com.projectmanagementsystem.project.exception.ProjectBadRequestException;
+import com.projectmanagementsystem.project.exception.ProjectConflictException;
 import com.projectmanagementsystem.project.dto.UpdateProjectRequest;
 import com.projectmanagementsystem.project.entity.Project;
 import com.projectmanagementsystem.project.entity.ProjectMember;
@@ -90,6 +95,70 @@ public class ProjectService {
         // Task/comment tables do not exist yet (later sprints), nothing else to cascade.
         members.deleteByProjectId(projectId);
         projects.delete(project);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectMemberResponse> listMembers(UUID userId, UUID projectId) {
+        Project project = findProject(projectId);
+        requireMember(userId, projectId);
+        UUID ownerId = project.getOwner().getId();
+        return members.findByProjectId(projectId).stream()
+                .map(m -> ProjectMemberResponse.from(
+                        m.getUser(),
+                        m.getUser().getId().equals(ownerId) ? "owner" : "member"))
+                .sorted((a, b) -> {
+                    // Owner first, then by email for determinism
+                    if (!a.role().equals(b.role())) {
+                        return "owner".equals(a.role()) ? -1 : 1;
+                    }
+                    return a.email().compareToIgnoreCase(b.email());
+                })
+                .toList();
+    }
+
+    @Transactional
+    public AddProjectMemberResponse addMember(UUID callerId, UUID projectId, AddProjectMemberRequest req) {
+        Project project = findProject(projectId);
+        requireOwner(callerId, project);
+        User target = resolveUser(req);
+        if (members.existsByProjectIdAndUserId(projectId, target.getId())) {
+            throw new ProjectConflictException("User is already a project member");
+        }
+        members.save(new ProjectMember(project, target));
+        return new AddProjectMemberResponse(target.getId().toString(), "member");
+    }
+
+    @Transactional
+    public void removeMember(UUID callerId, UUID projectId, UUID targetUserId) {
+        Project project = findProject(projectId);
+        requireOwner(callerId, project);
+        if (project.getOwner().getId().equals(targetUserId)) {
+            throw new ProjectBadRequestException("The project owner cannot be removed");
+        }
+        users.findById(targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", targetUserId));
+        if (!members.existsByProjectIdAndUserId(projectId, targetUserId)) {
+            throw new ResourceNotFoundException("Membership", targetUserId);
+        }
+        members.deleteByProjectIdAndUserId(projectId, targetUserId);
+        onMemberRemoved(projectId, targetUserId);
+    }
+
+    /**
+     * Hook after member removal — Sprint 007 wires task assignee-clearing here.
+     * No task tables exist yet, so this is intentionally a no-op.
+     */
+    protected void onMemberRemoved(UUID projectId, UUID targetUserId) {
+        // Sprint 007: unassign tasks of targetUserId in projectId.
+    }
+
+    private User resolveUser(AddProjectMemberRequest req) {
+        if (req.userId() != null) {
+            return users.findById(req.userId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", req.userId()));
+        }
+        return users.findByEmail(req.email())
+                .orElseThrow(() -> new ResourceNotFoundException("User", req.email()));
     }
 
     private Project findProject(UUID projectId) {

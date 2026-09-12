@@ -158,6 +158,42 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(com.projectmanagementsystem.project.exception.ProjectConflictException.class)
+    public ProblemDetail handleProjectConflict(
+            com.projectmanagementsystem.project.exception.ProjectConflictException ex,
+            HttpServletRequest request) {
+        String detail = ex.getMessage() != null ? ex.getMessage() : "Conflicting resource state";
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, detail);
+        problem.setType(URI.create("https://api.example.com/problems/conflict"));
+        problem.setTitle("Conflict");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
+    @ExceptionHandler(com.projectmanagementsystem.project.exception.ProjectBadRequestException.class)
+    public ProblemDetail handleProjectBadRequest(
+            com.projectmanagementsystem.project.exception.ProjectBadRequestException ex,
+            HttpServletRequest request) {
+        String detail = ex.getMessage() != null ? ex.getMessage() : "Bad request";
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+        problem.setType(URI.create("https://api.example.com/problems/bad-request"));
+        problem.setTitle("Bad request");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ProblemDetail handleNotReadable(
+            org.springframework.http.converter.HttpMessageNotReadableException ex,
+            HttpServletRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST, "Malformed request body.");
+        problem.setType(URI.create("https://api.example.com/problems/malformed-request"));
+        problem.setTitle("Malformed request");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ProblemDetail handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(

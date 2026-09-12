@@ -48,6 +48,9 @@ class TaskControllerTest {
     private ProjectMemberRepository members;
 
     @Autowired
+    private com.projectmanagementsystem.task.repository.TaskRepository taskRepository;
+
+    @Autowired
     private PasswordEncoder encoder;
 
     @Autowired
@@ -295,6 +298,51 @@ class TaskControllerTest {
                         .header("Authorization", bearer(member)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    void list_search_respectsProjectScope() throws Exception {
+        // Description-only match living in ANOTHER project must never leak in
+        User secondOwner = newUser();
+        com.projectmanagementsystem.project.entity.Project otherProject =
+                projects.saveAndFlush(new com.projectmanagementsystem.project.entity.Project(
+                        "Other", null, secondOwner));
+
+        createTaskWith("Unrelated", "SECRET-TOKEN-XYZ description here", null, null, null);
+
+        // Same search term matches only within the requested project scope:
+        // create the decoy directly in the other project via repository
+        com.projectmanagementsystem.task.entity.Task decoy =
+                new com.projectmanagementsystem.task.entity.Task(otherProject, "Decoy");
+        decoy.setDescription("SECRET-TOKEN-XYZ inside");
+        taskRepository.saveAndFlush(decoy);
+
+        mockMvc.perform(get(base() + "?search=secret-token-xyz")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.meta.total").value(1));
+    }
+
+    @Test
+    void list_searchCombinedWithStatus_returnsOnlyMatchingRows() throws Exception {
+        createTaskWith("Login bug", "OAuth broken", "BUG", "TODO", "HIGH");
+        createTaskWith("Login docs", "OAuth guide", "FEATURE", "DONE", "LOW");
+
+        // search matches both, status narrows to one
+        mockMvc.perform(get(base() + "?search=oauth&status=DONE")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.meta.total").value(1))
+                .andExpect(jsonPath("$.data[0].title").value("Login docs"));
+
+        // search matches, status matches nothing
+        mockMvc.perform(get(base() + "?search=oauth&status=IN_PROGRESS")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0))
+                .andExpect(jsonPath("$.meta.total").value(0));
     }
 
     @Test

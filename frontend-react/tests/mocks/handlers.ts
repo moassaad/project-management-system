@@ -221,4 +221,138 @@ export const handlers = [
       }),
     ]
   })(),
+
+  // Tasks mocks — behavior-focused, contract-first for Sprint 007
+  // (backend BE-S007-01..03 not yet built). Task enums per api-design 4.6;
+  // list paginated {data, meta} like projects; assignee must be a member (422).
+  ...(() => {
+    const ALPHA = '00000000-0000-4000-a000-000000000010'
+    const BETA = '00000000-0000-4000-a000-000000000020'
+    const OWNER = '00000000-0000-4000-a000-000000000001'
+    const MEMBER = '00000000-0000-4000-a000-000000000002'
+    const membersOf: Record<string, string[]> = {
+      [ALPHA]: [OWNER, MEMBER],
+      [BETA]: [OWNER],
+    }
+    type MockTask = {
+      id: string
+      projectId: string
+      title: string
+      description: string | null
+      type: string | null
+      status: string
+      priority: string
+      assigneeId: string | null
+      dueDate: string | null
+      createdAt: string
+    }
+    const now = new Date().toISOString()
+    const tasksByProject: Record<string, MockTask[]> = {
+      [ALPHA]: [
+        { id: '00000000-0000-4000-a000-000000000a10', projectId: ALPHA, title: 'Setup CI', description: 'Add pipeline', type: 'FEATURE', status: 'TODO', priority: 'HIGH', assigneeId: MEMBER, dueDate: '2026-09-20', createdAt: now },
+        { id: '00000000-0000-4000-a000-000000000a20', projectId: ALPHA, title: 'Fix login bug', description: null, type: 'BUG', status: 'IN_PROGRESS', priority: 'MEDIUM', assigneeId: null, dueDate: null, createdAt: now },
+      ],
+      [BETA]: [
+        { id: '00000000-0000-4000-a000-000000000b10', projectId: BETA, title: 'Write docs', description: null, type: 'IMPROVEMENT', status: 'DONE', priority: 'LOW', assigneeId: null, dueDate: null, createdAt: now },
+      ],
+    }
+    const problem = (type: string, title: string, status: number, detail: string, instance: string, extra?: Record<string, unknown>) =>
+      HttpResponse.json(
+        { type: `https://api.example.com/problems/${type}`, title, status, detail, instance, ...extra },
+        { status, headers: { 'Content-Type': 'application/problem+json' } },
+      )
+    const findTask = (projectId: string, taskId: string) =>
+      tasksByProject[projectId]?.find((t) => t.id === taskId)
+    return [
+      http.get('*/api/v1/projects/:projectId/tasks', ({ params, request }) => {
+        const projectId = params.projectId as string
+        const list = tasksByProject[projectId]
+        if (!list) {
+          return problem('not-found', 'Not found', 404, 'Project not found', `/api/v1/projects/${projectId}/tasks`)
+        }
+        const url = new URL(request.url)
+        const page = Number(url.searchParams.get('page') ?? '1')
+        const perPage = Number(url.searchParams.get('perPage') ?? '20')
+        const start = (page - 1) * perPage
+        return HttpResponse.json({
+          data: list.slice(start, start + perPage),
+          meta: { currentPage: page, perPage, total: list.length, lastPage: Math.ceil(list.length / perPage) || 1 },
+        })
+      }),
+      http.get('*/api/v1/projects/:projectId/tasks/:taskId', ({ params }) => {
+        const projectId = params.projectId as string
+        const taskId = params.taskId as string
+        const found = findTask(projectId, taskId)
+        if (!found) {
+          return problem('not-found', 'Not found', 404, 'Task not found', `/api/v1/projects/${projectId}/tasks/${taskId}`)
+        }
+        return HttpResponse.json({ data: found })
+      }),
+      http.post('*/api/v1/projects/:projectId/tasks', async ({ params, request }) => {
+        const projectId = params.projectId as string
+        const list = tasksByProject[projectId]
+        if (!list) {
+          return problem('not-found', 'Not found', 404, 'Project not found', `/api/v1/projects/${projectId}/tasks`)
+        }
+        const body = (await request.json()) as { title?: string; description?: string; type?: string; status?: string; priority?: string; assigneeId?: string; dueDate?: string }
+        if (!body.title) {
+          return problem('validation-error', 'Validation failed', 422, 'Invalid task', `/api/v1/projects/${projectId}/tasks`, {
+            errors: [{ detail: 'Task title required', pointer: '#/title' }],
+          })
+        }
+        if (body.assigneeId && !membersOf[projectId]?.includes(body.assigneeId)) {
+          return problem('validation-error', 'Validation failed', 422, 'Invalid task', `/api/v1/projects/${projectId}/tasks`, {
+            errors: [{ detail: 'Assignee must be a project member', pointer: '#/assigneeId' }],
+          })
+        }
+        const created: MockTask = {
+          id: '00000000-0000-4000-a000-000000000a30',
+          projectId,
+          title: body.title,
+          description: body.description ?? null,
+          type: body.type ?? null,
+          status: body.status ?? 'TODO',
+          priority: body.priority ?? 'MEDIUM',
+          assigneeId: body.assigneeId ?? null,
+          dueDate: body.dueDate ?? null,
+          createdAt: new Date().toISOString(),
+        }
+        list.push(created)
+        return HttpResponse.json({ data: created }, { status: 201 })
+      }),
+      http.patch('*/api/v1/projects/:projectId/tasks/:taskId', async ({ params, request }) => {
+        const projectId = params.projectId as string
+        const taskId = params.taskId as string
+        const found = findTask(projectId, taskId)
+        if (!found) {
+          return problem('not-found', 'Not found', 404, 'Task not found', `/api/v1/projects/${projectId}/tasks/${taskId}`)
+        }
+        const body = (await request.json()) as { title?: string; description?: string | null; type?: string | null; status?: string; priority?: string; assigneeId?: string | null; dueDate?: string | null }
+        if (body.assigneeId !== undefined && body.assigneeId !== null && !membersOf[projectId]?.includes(body.assigneeId)) {
+          return problem('validation-error', 'Validation failed', 422, 'Invalid task', `/api/v1/projects/${projectId}/tasks/${taskId}`, {
+            errors: [{ detail: 'Assignee must be a project member', pointer: '#/assigneeId' }],
+          })
+        }
+        if (body.title !== undefined) found.title = body.title
+        if (body.description !== undefined) found.description = body.description
+        if (body.type !== undefined) found.type = body.type
+        if (body.status !== undefined) found.status = body.status
+        if (body.priority !== undefined) found.priority = body.priority
+        if (body.assigneeId !== undefined) found.assigneeId = body.assigneeId
+        if (body.dueDate !== undefined) found.dueDate = body.dueDate
+        return HttpResponse.json({ data: found })
+      }),
+      http.delete('*/api/v1/projects/:projectId/tasks/:taskId', ({ params }) => {
+        const projectId = params.projectId as string
+        const taskId = params.taskId as string
+        const list = tasksByProject[projectId]
+        const idx = list?.findIndex((t) => t.id === taskId) ?? -1
+        if (!list || idx === -1) {
+          return problem('not-found', 'Not found', 404, 'Task not found', `/api/v1/projects/${projectId}/tasks/${taskId}`)
+        }
+        list.splice(idx, 1)
+        return new HttpResponse(null, { status: 204 })
+      }),
+    ]
+  })(),
 ]

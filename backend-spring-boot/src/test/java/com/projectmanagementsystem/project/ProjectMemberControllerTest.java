@@ -1,5 +1,6 @@
 package com.projectmanagementsystem.project;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -222,6 +223,72 @@ class ProjectMemberControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"not-an-email\"}"))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void remove_revokesAccessImmediately() throws Exception {
+        mockMvc.perform(delete("/api/v1/projects/" + projectId + "/members/" + member.getId())
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isNoContent());
+
+        // Removed member loses access immediately
+        mockMvc.perform(get("/api/v1/projects/" + projectId)
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isForbidden());
+
+        // Removing again → 404 membership
+        mockMvc.perform(delete("/api/v1/projects/" + projectId + "/members/" + member.getId())
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/resource-not-found"));
+    }
+
+    @Test
+    void remove_owner_returns400() throws Exception {
+        mockMvc.perform(delete("/api/v1/projects/" + projectId + "/members/" + owner.getId())
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/bad-request"))
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void remove_nonOwner_returns403() throws Exception {
+        mockMvc.perform(delete("/api/v1/projects/" + projectId + "/members/" + member.getId())
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/forbidden"));
+
+        mockMvc.perform(delete("/api/v1/projects/" + projectId + "/members/" + member.getId())
+                        .header("Authorization", bearer(outsider)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void remove_unknown_returns404() throws Exception {
+        mockMvc.perform(delete("/api/v1/projects/" + UUID.randomUUID() + "/members/" + member.getId())
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/v1/projects/" + projectId + "/members/" + UUID.randomUUID())
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isNotFound());
+
+        // Existing user who was never a member → 404 membership
+        mockMvc.perform(delete("/api/v1/projects/" + projectId + "/members/" + outsider.getId())
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void remove_anonymous_returns401() throws Exception {
+        mockMvc.perform(delete("/api/v1/projects/" + projectId + "/members/" + member.getId()))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

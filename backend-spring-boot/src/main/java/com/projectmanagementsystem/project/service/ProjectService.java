@@ -8,6 +8,7 @@ import com.projectmanagementsystem.project.dto.AddProjectMemberResponse;
 import com.projectmanagementsystem.project.dto.CreateProjectRequest;
 import com.projectmanagementsystem.project.dto.ProjectMemberResponse;
 import com.projectmanagementsystem.project.dto.ProjectResponse;
+import com.projectmanagementsystem.project.exception.ProjectBadRequestException;
 import com.projectmanagementsystem.project.exception.ProjectConflictException;
 import com.projectmanagementsystem.project.dto.UpdateProjectRequest;
 import com.projectmanagementsystem.project.entity.Project;
@@ -125,6 +126,30 @@ public class ProjectService {
         }
         members.save(new ProjectMember(project, target));
         return new AddProjectMemberResponse(target.getId().toString(), "member");
+    }
+
+    @Transactional
+    public void removeMember(UUID callerId, UUID projectId, UUID targetUserId) {
+        Project project = findProject(projectId);
+        requireOwner(callerId, project);
+        if (project.getOwner().getId().equals(targetUserId)) {
+            throw new ProjectBadRequestException("The project owner cannot be removed");
+        }
+        users.findById(targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", targetUserId));
+        if (!members.existsByProjectIdAndUserId(projectId, targetUserId)) {
+            throw new ResourceNotFoundException("Membership", targetUserId);
+        }
+        members.deleteByProjectIdAndUserId(projectId, targetUserId);
+        onMemberRemoved(projectId, targetUserId);
+    }
+
+    /**
+     * Hook after member removal — Sprint 007 wires task assignee-clearing here.
+     * No task tables exist yet, so this is intentionally a no-op.
+     */
+    protected void onMemberRemoved(UUID projectId, UUID targetUserId) {
+        // Sprint 007: unassign tasks of targetUserId in projectId.
     }
 
     private User resolveUser(AddProjectMemberRequest req) {

@@ -61,6 +61,59 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/schemas/ProjectResponse"
+  /api/v1/projects/{projectId}/members:
+    get:
+      tags:
+      - project-members
+      summary: List project members
+      description: Lists members with roles; members only
+      operationId: list_1
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ProjectMemberResponse"
+    post:
+      tags:
+      - project-members
+      summary: Add project member
+      description: Adds an existing user by id or email; owner only
+      operationId: add
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddProjectMemberRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/AddProjectMemberResponse"
   /api/v1/auth/refresh:
     post:
       tags:
@@ -191,31 +244,6 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/schemas/ProjectResponse"
-  /api/v1/projects/{projectId}/members:
-    get:
-      tags:
-      - project-members
-      summary: List project members
-      description: Lists members with roles; members only
-      operationId: list_1
-      parameters:
-      - name: projectId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/ProjectMemberResponse"
   /api/v1/health:
     get:
       tags:
@@ -276,6 +304,24 @@ components:
         ownerId:
           type: string
         createdAt:
+          type: string
+    AddProjectMemberRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        targetPresent:
+          type: boolean
+    AddProjectMemberResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        role:
           type: string
     LoginRequest:
       type: object

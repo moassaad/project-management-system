@@ -1,6 +1,7 @@
 package com.projectmanagementsystem.project;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -118,5 +119,119 @@ class ProjectMemberControllerTest {
                         .header("Authorization", bearer(owner)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.type").value("https://api.example.com/problems/resource-not-found"));
+    }
+
+    @Test
+    void add_byIdAndEmail_returns201AndGrantsAccess() throws Exception {
+        User candidate = newUser();
+
+        // By id
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + candidate.getId() + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.userId").value(candidate.getId().toString()))
+                .andExpect(jsonPath("$.data.role").value("member"));
+
+        // Added user gains member access immediately
+        mockMvc.perform(get("/api/v1/projects/" + projectId)
+                        .header("Authorization", bearer(candidate)))
+                .andExpect(status().isOk());
+
+        // By email
+        User candidate2 = newUser();
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + candidate2.getEmail() + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.userId").value(candidate2.getId().toString()));
+    }
+
+    @Test
+    void add_duplicate_returns409() throws Exception {
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + member.getId() + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/conflict"))
+                .andExpect(jsonPath("$.status").value(409));
+    }
+
+    @Test
+    void add_unknownUserOrProject_returns404() throws Exception {
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/resource-not-found"));
+
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"ghost@example.com\"}"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/v1/projects/" + UUID.randomUUID() + "/members")
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + outsider.getEmail() + "\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void add_nonOwner_returns403() throws Exception {
+        // Member (non-owner) and outsider are both rejected before user resolution
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + outsider.getEmail() + "\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/forbidden"));
+
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(outsider))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + outsider.getEmail() + "\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void add_anonymous_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + outsider.getEmail() + "\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void add_missingTarget_returns422() throws Exception {
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/validation-error"));
+
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"not-an-email\"}"))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void add_malformedUuid_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"not-a-uuid\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/malformed-request"));
     }
 }

@@ -3,9 +3,12 @@ package com.projectmanagementsystem.project.service;
 import com.projectmanagementsystem.auth.entity.User;
 import com.projectmanagementsystem.auth.repository.UserRepository;
 import com.projectmanagementsystem.common.exception.ResourceNotFoundException;
+import com.projectmanagementsystem.project.dto.AddProjectMemberRequest;
+import com.projectmanagementsystem.project.dto.AddProjectMemberResponse;
 import com.projectmanagementsystem.project.dto.CreateProjectRequest;
 import com.projectmanagementsystem.project.dto.ProjectMemberResponse;
 import com.projectmanagementsystem.project.dto.ProjectResponse;
+import com.projectmanagementsystem.project.exception.ProjectConflictException;
 import com.projectmanagementsystem.project.dto.UpdateProjectRequest;
 import com.projectmanagementsystem.project.entity.Project;
 import com.projectmanagementsystem.project.entity.ProjectMember;
@@ -110,6 +113,27 @@ public class ProjectService {
                     return a.email().compareToIgnoreCase(b.email());
                 })
                 .toList();
+    }
+
+    @Transactional
+    public AddProjectMemberResponse addMember(UUID callerId, UUID projectId, AddProjectMemberRequest req) {
+        Project project = findProject(projectId);
+        requireOwner(callerId, project);
+        User target = resolveUser(req);
+        if (members.existsByProjectIdAndUserId(projectId, target.getId())) {
+            throw new ProjectConflictException("User is already a project member");
+        }
+        members.save(new ProjectMember(project, target));
+        return new AddProjectMemberResponse(target.getId().toString(), "member");
+    }
+
+    private User resolveUser(AddProjectMemberRequest req) {
+        if (req.userId() != null) {
+            return users.findById(req.userId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", req.userId()));
+        }
+        return users.findByEmail(req.email())
+                .orElseThrow(() -> new ResourceNotFoundException("User", req.email()));
     }
 
     private Project findProject(UUID projectId) {

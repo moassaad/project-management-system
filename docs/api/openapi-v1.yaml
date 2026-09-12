@@ -61,13 +61,80 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/schemas/ProjectResponse"
+  /api/v1/projects/{projectId}/tasks:
+    get:
+      tags:
+      - tasks
+      summary: List tasks
+      description: "Lists project tasks, paginated; members only"
+      operationId: list_1
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: perPage
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+    post:
+      tags:
+      - tasks
+      summary: Create task
+      description: "Creates a task; members only, assignee must be a member"
+      operationId: create_1
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/TaskResponse"
   /api/v1/projects/{projectId}/members:
     get:
       tags:
       - project-members
       summary: List project members
       description: Lists members with roles; members only
-      operationId: list_1
+      operationId: list_2
       parameters:
       - name: projectId
         in: path
@@ -244,6 +311,91 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/schemas/ProjectResponse"
+  /api/v1/projects/{projectId}/tasks/{taskId}:
+    get:
+      tags:
+      - tasks
+      summary: Get task
+      description: Returns a task by id; members only
+      operationId: get_1
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/TaskResponse"
+    delete:
+      tags:
+      - tasks
+      summary: Delete task
+      description: Deletes a task; members only
+      operationId: delete_1
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags:
+      - tasks
+      summary: Update task
+      description: Partially updates a task; null fields unchanged; members only
+      operationId: patch_1
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/TaskResponse"
   /api/v1/health:
     get:
       tags:
@@ -329,6 +481,54 @@ components:
           type: string
         createdAt:
           type: string
+    CreateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 255
+          minLength: 0
+        type:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        assigneeId:
+          type: string
+          format: uuid
+        dueDate:
+          type: string
+          format: date
+      required:
+      - title
+    TaskResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        assigneeId:
+          type: string
+        dueDate:
+          type: string
+        createdAt:
+          type: string
     AddProjectMemberRequest:
       type: object
       properties:
@@ -387,6 +587,31 @@ components:
           maxLength: 255
           minLength: 0
         nameValid:
+          type: boolean
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 255
+          minLength: 0
+        type:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        assigneeId:
+          type: string
+          format: uuid
+        dueDate:
+          type: string
+          format: date
+        titleValid:
           type: boolean
     ProjectMemberResponse:
       type: object

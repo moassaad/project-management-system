@@ -50,12 +50,17 @@ public class TaskController {
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "List tasks", description = "Lists project tasks, paginated; members only")
+    @Operation(summary = "List tasks", description = "Lists project tasks with search/enum filters, paginated; members only")
     public ResponseEntity<Map<String, Object>> list(
             @PathVariable UUID projectId,
             @RequestParam(defaultValue = "1") @Min(1) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int perPage) {
-        TaskService.TaskPage result = taskService.list(currentUserId(), projectId, page, perPage);
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int perPage,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String priority) {
+        TaskService.TaskPage result = taskService.list(
+                currentUserId(), projectId, page, perPage, search, status, type, priority);
         long lastPage = result.total() == 0 ? 0 : (result.total() + perPage - 1) / perPage;
         Map<String, Object> meta = Map.of(
                 "currentPage", page,

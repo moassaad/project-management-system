@@ -273,10 +273,25 @@ export const handlers = [
         const url = new URL(request.url)
         const page = Number(url.searchParams.get('page') ?? '1')
         const perPage = Number(url.searchParams.get('perPage') ?? '20')
+        // Server-side filtering per api-design 4.7: case-insensitive search
+        // on title/description, exact enum matches, combined AND.
+        const search = (url.searchParams.get('search') ?? '').toLowerCase()
+        const status = url.searchParams.get('status')
+        const type = url.searchParams.get('type')
+        const priority = url.searchParams.get('priority')
+        const filtered = list.filter((t) => {
+          if (search && !`${t.title} ${t.description ?? ''}`.toLowerCase().includes(search)) {
+            return false
+          }
+          if (status && t.status !== status) return false
+          if (type && t.type !== type) return false
+          if (priority && t.priority !== priority) return false
+          return true
+        })
         const start = (page - 1) * perPage
         return HttpResponse.json({
-          data: list.slice(start, start + perPage),
-          meta: { currentPage: page, perPage, total: list.length, lastPage: Math.ceil(list.length / perPage) || 1 },
+          data: filtered.slice(start, start + perPage),
+          meta: { currentPage: page, perPage, total: filtered.length, lastPage: Math.ceil(filtered.length / perPage) || 1 },
         })
       }),
       http.get('*/api/v1/projects/:projectId/tasks/:taskId', ({ params }) => {

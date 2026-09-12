@@ -197,6 +197,18 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(com.projectmanagementsystem.task.exception.TaskBadRequestException.class)
+    public ProblemDetail handleTaskBadRequest(
+            com.projectmanagementsystem.task.exception.TaskBadRequestException ex,
+            HttpServletRequest request) {
+        String detail = ex.getMessage() != null ? ex.getMessage() : "Bad request";
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+        problem.setType(URI.create("https://api.example.com/problems/bad-request"));
+        problem.setTitle("Bad request");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
     public ProblemDetail handleNotReadable(
             org.springframework.http.converter.HttpMessageNotReadableException ex,

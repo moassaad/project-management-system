@@ -48,6 +48,9 @@ class TaskControllerTest {
     private ProjectMemberRepository members;
 
     @Autowired
+    private com.projectmanagementsystem.task.repository.TaskRepository taskRepository;
+
+    @Autowired
     private PasswordEncoder encoder;
 
     @Autowired
@@ -199,6 +202,150 @@ class TaskControllerTest {
     }
 
     @Test
+    void list_search_matchesTitleAndDescriptionCaseInsensitively() throws Exception {
+        createTaskWith("Fix login page", "OAuth flow broken", null, null, null);
+        createTaskWith("Write docs", "LOGIN instructions", null, null, null);
+        createTaskWith("Deploy app", "Release notes", null, null, null);
+
+        // Title match (case-insensitive)
+        mockMvc.perform(get(base() + "?search=LOGIN")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.meta.total").value(2));
+
+        // Description-only match
+        mockMvc.perform(get(base() + "?search=oauth")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+
+        // No match
+        mockMvc.perform(get(base() + "?search=zzz-no-match")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0))
+                .andExpect(jsonPath("$.meta.total").value(0))
+                .andExpect(jsonPath("$.meta.lastPage").value(0));
+    }
+
+    @Test
+    void list_enumFilters_exactMatchAndCombined() throws Exception {
+        createTaskWith("Bug one", null, "BUG", "TODO", "HIGH");
+        createTaskWith("Feature one", null, "FEATURE", "IN_PROGRESS", "LOW");
+        createTaskWith("Bug two", null, "BUG", "DONE", "MEDIUM");
+
+        mockMvc.perform(get(base() + "?type=BUG")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.meta.total").value(2));
+
+        mockMvc.perform(get(base() + "?status=DONE")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.meta.total").value(1));
+
+        mockMvc.perform(get(base() + "?priority=LOW")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.meta.total").value(1));
+
+        // Combined AND
+        mockMvc.perform(get(base() + "?type=BUG&status=TODO&priority=HIGH")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.meta.total").value(1));
+
+        mockMvc.perform(get(base() + "?type=BUG&status=DONE")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.meta.total").value(1));
+    }
+
+    @Test
+    void list_invalidEnum_returns400() throws Exception {
+        mockMvc.perform(get(base() + "?status=WRONG")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/bad-request"))
+                .andExpect(jsonPath("$.status").value(400));
+
+        mockMvc.perform(get(base() + "?type=NOPE")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get(base() + "?priority=HIGHEST")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void list_paginationReflectsFilteredTotal() throws Exception {
+        createTaskWith("Bug A", null, "BUG", "TODO", "MEDIUM");
+        createTaskWith("Bug B", null, "BUG", "TODO", "MEDIUM");
+        createTaskWith("Bug C", null, "BUG", "TODO", "MEDIUM");
+        createTaskWith("Feature D", null, "FEATURE", "TODO", "MEDIUM");
+
+        mockMvc.perform(get(base() + "?type=BUG&page=1&perPage=2")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.meta.total").value(3))
+                .andExpect(jsonPath("$.meta.lastPage").value(2));
+
+        mockMvc.perform(get(base() + "?type=BUG&page=2&perPage=2")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    void list_search_respectsProjectScope() throws Exception {
+        // Description-only match living in ANOTHER project must never leak in
+        User secondOwner = newUser();
+        com.projectmanagementsystem.project.entity.Project otherProject =
+                projects.saveAndFlush(new com.projectmanagementsystem.project.entity.Project(
+                        "Other", null, secondOwner));
+
+        createTaskWith("Unrelated", "SECRET-TOKEN-XYZ description here", null, null, null);
+
+        // Same search term matches only within the requested project scope:
+        // create the decoy directly in the other project via repository
+        com.projectmanagementsystem.task.entity.Task decoy =
+                new com.projectmanagementsystem.task.entity.Task(otherProject, "Decoy");
+        decoy.setDescription("SECRET-TOKEN-XYZ inside");
+        taskRepository.saveAndFlush(decoy);
+
+        mockMvc.perform(get(base() + "?search=secret-token-xyz")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.meta.total").value(1));
+    }
+
+    @Test
+    void list_searchCombinedWithStatus_returnsOnlyMatchingRows() throws Exception {
+        createTaskWith("Login bug", "OAuth broken", "BUG", "TODO", "HIGH");
+        createTaskWith("Login docs", "OAuth guide", "FEATURE", "DONE", "LOW");
+
+        // search matches both, status narrows to one
+        mockMvc.perform(get(base() + "?search=oauth&status=DONE")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.meta.total").value(1))
+                .andExpect(jsonPath("$.data[0].title").value("Login docs"));
+
+        // search matches, status matches nothing
+        mockMvc.perform(get(base() + "?search=oauth&status=IN_PROGRESS")
+                        .header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0))
+                .andExpect(jsonPath("$.meta.total").value(0));
+    }
+
+    @Test
     void list_nonMember_returns403() throws Exception {
         mockMvc.perform(get(base())
                         .header("Authorization", bearer(outsider)))
@@ -292,5 +439,28 @@ class TaskControllerTest {
         // Minimal id extraction without extra deps
         int start = body.indexOf("\"id\":\"") + 6;
         return body.substring(start, body.indexOf("\"", start));
+    }
+
+    private void createTaskWith(String title, String description, String type, String status, String priority)
+            throws Exception {
+        StringBuilder json = new StringBuilder("{\"title\":\"" + title + "\"");
+        if (description != null) {
+            json.append(",\"description\":\"").append(description).append("\"");
+        }
+        if (type != null) {
+            json.append(",\"type\":\"").append(type).append("\"");
+        }
+        if (status != null) {
+            json.append(",\"status\":\"").append(status).append("\"");
+        }
+        if (priority != null) {
+            json.append(",\"priority\":\"").append(priority).append("\"");
+        }
+        json.append("}");
+        mockMvc.perform(post(base())
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.toString()))
+                .andExpect(status().isCreated());
     }
 }

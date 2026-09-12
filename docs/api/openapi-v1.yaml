@@ -66,7 +66,8 @@ paths:
       tags:
       - tasks
       summary: List tasks
-      description: "Lists project tasks, paginated; members only"
+      description: "Lists project tasks with search/enum filters, paginated; members\
+        \ only"
       operationId: list_1
       parameters:
       - name: projectId
@@ -92,6 +93,26 @@ paths:
           default: 20
           maximum: 100
           minimum: 1
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: type
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: priority
+        in: query
+        required: false
+        schema:
+          type: string
       responses:
         "200":
           description: OK

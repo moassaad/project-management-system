@@ -3,8 +3,11 @@ import { Link, useParams } from 'react-router'
 
 import { Button } from '../../../components/ui/Button.tsx'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card.tsx'
+import { Input } from '../../../components/ui/Input.tsx'
+import { useDebouncedValue } from '../hooks/useDebouncedValue.ts'
 import { useTasksQuery } from '../hooks/useTasksQueries.ts'
 import { TaskBadges } from '../components/TaskBadges.tsx'
+import type { TaskPriority, TaskStatus, TaskType } from '../types/task.types.ts'
 
 function getStatus(error: unknown): number | undefined {
   if (typeof error === 'object' && error !== null && 'response' in error) {
@@ -15,28 +18,145 @@ function getStatus(error: unknown): number | undefined {
 }
 
 function errorMessage(status: number | undefined): string {
+  if (status === 400) return 'Invalid filter values. Please adjust the filters and try again.'
   if (status === 401) return 'You are not authenticated. Please sign in again.'
   if (status === 403) return 'You do not have access to these tasks.'
   if (status === 404) return 'Project not found.'
   return 'Unable to load tasks. Please try again.'
 }
 
+const selectClassName =
+  'flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+
 /**
  * Project tasks list page at /projects/:projectId/tasks (protected).
- * Uses useTasksQuery with pagination; loading skeletons, empty, error
- * (status-based). No search/filter (deferred to Sprint 010).
+ * Search (debounced 300ms) + status/type/priority selects travel as query
+ * params via useTasksQuery; any filter change resets to page 1. Empty states
+ * distinguish "no tasks at all" from "no matches for current filters".
+ *
+ * State choice (FE-S010-01): local component state, not URL search params —
+ * consistent with the existing local page state on this and the projects
+ * list; no deep-link requirement in scope.
+ *
+ * The New Task action (FE-TASK-01) renders in the list/empty states only:
+ * non-members get the backend 403 error state instead (members may create
+ * per business-rules 2.4; backend remains authoritative, no extra
+ * membership query needed).
  */
 export function TasksPage() {
   const { projectId = '' } = useParams()
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
+  const [type, setType] = useState('')
+  const [priority, setPriority] = useState('')
   const perPage = 20
-  const { data, isLoading, isError, error, refetch } = useTasksQuery(projectId, page, perPage)
+
+  const debouncedSearch = useDebouncedValue(search)
+  const filters = {
+    search: debouncedSearch || undefined,
+    status: (status || undefined) as TaskStatus | undefined,
+    type: (type || undefined) as TaskType | undefined,
+    priority: (priority || undefined) as TaskPriority | undefined,
+  }
+  const filtersActive = !!debouncedSearch || !!status || !!type || !!priority
+
+  const { data, isLoading, isError, error, refetch } = useTasksQuery(
+    projectId,
+    page,
+    perPage,
+    filters,
+  )
+
+  const handleFilterChange = (setter: (value: string) => void) => (value: string) => {
+    setter(value)
+    setPage(1)
+  }
+
+  const handleClearFilters = () => {
+    setSearch('')
+    setStatus('')
+    setType('')
+    setPriority('')
+    setPage(1)
+  }
+
+  const filterControls = (
+    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <Input
+        id="task-filter-search"
+        label="Search"
+        type="search"
+        placeholder="Search title or description…"
+        value={search}
+        onChange={(e) => handleFilterChange(setSearch)(e.target.value)}
+      />
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="task-filter-status" className="text-sm font-medium text-gray-700">
+          Status
+        </label>
+        <select
+          id="task-filter-status"
+          className={selectClassName}
+          value={status}
+          onChange={(e) => handleFilterChange(setStatus)(e.target.value)}
+        >
+          <option value="">All</option>
+          <option value="TODO">TODO</option>
+          <option value="IN_PROGRESS">IN_PROGRESS</option>
+          <option value="DONE">DONE</option>
+        </select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="task-filter-type" className="text-sm font-medium text-gray-700">
+          Type
+        </label>
+        <select
+          id="task-filter-type"
+          className={selectClassName}
+          value={type}
+          onChange={(e) => handleFilterChange(setType)(e.target.value)}
+        >
+          <option value="">All</option>
+          <option value="FEATURE">FEATURE</option>
+          <option value="BUG">BUG</option>
+          <option value="IMPROVEMENT">IMPROVEMENT</option>
+        </select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="task-filter-priority" className="text-sm font-medium text-gray-700">
+          Priority
+        </label>
+        <select
+          id="task-filter-priority"
+          className={selectClassName}
+          value={priority}
+          onChange={(e) => handleFilterChange(setPriority)(e.target.value)}
+        >
+          <option value="">All</option>
+          <option value="LOW">LOW</option>
+          <option value="MEDIUM">MEDIUM</option>
+          <option value="HIGH">HIGH</option>
+        </select>
+      </div>
+      <div className="flex items-end">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleClearFilters}
+          disabled={!search && !status && !type && !priority}
+        >
+          Clear filters
+        </Button>
+      </div>
+    </div>
+  )
 
   if (isLoading) {
     return (
       <section aria-label="Tasks">
         <h1 className="text-2xl font-semibold text-gray-900">Tasks</h1>
-        <div aria-label="Loading tasks" className="mt-4 space-y-3">
+        <div role="status" aria-label="Loading tasks" className="mt-4 space-y-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-100" aria-hidden="true" />
           ))}
@@ -56,6 +176,7 @@ export function TasksPage() {
           Back to project
         </Link>
         <h1 className="mt-3 text-2xl font-semibold text-gray-900">Tasks</h1>
+        {filterControls}
         <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-700">{errorMessage(getStatus(error))}</p>
           <Button variant="secondary" size="sm" className="mt-3" onClick={() => void refetch()}>
@@ -78,16 +199,23 @@ export function TasksPage() {
         >
           Back to project
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold text-gray-900">Tasks</h1>
-        <Link
-        to={`/projects/${projectId}/tasks/new`}
-        className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-      >
-        New Task
-      </Link>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-gray-900">Tasks</h1>
+          <Link
+            to={`/projects/${projectId}/tasks/new`}
+            className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            New Task
+          </Link>
+        </div>
+        {filterControls}
         <Card className="mt-4">
           <CardContent>
-            <p className="text-sm text-gray-600">No tasks yet.</p>
+            {filtersActive ? (
+              <p className="text-sm text-gray-600">No tasks match the current filters.</p>
+            ) : (
+              <p className="text-sm text-gray-600">No tasks yet.</p>
+            )}
           </CardContent>
         </Card>
       </section>
@@ -102,13 +230,21 @@ export function TasksPage() {
       >
         Back to project
       </Link>
-      <h1 className="mt-3 text-2xl font-semibold text-gray-900">Tasks</h1>
-      <Link
-        to={`/projects/${projectId}/tasks/new`}
-        className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-      >
-        New Task
-      </Link>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-gray-900">Tasks</h1>
+        <Link
+          to={`/projects/${projectId}/tasks/new`}
+          className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          New Task
+        </Link>
+      </div>
+      {filterControls}
+      {meta ? (
+        <p className="mt-3 text-sm text-gray-500" aria-live="polite">
+          Showing {tasks.length} of {meta.total} tasks
+        </p>
+      ) : null}
       <ul className="mt-4 space-y-3">
         {tasks.map((task) => (
           <li key={task.id}>

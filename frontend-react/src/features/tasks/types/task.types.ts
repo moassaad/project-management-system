@@ -55,3 +55,14 @@ export type PaginatedTasks = {
   data: Task[]
   meta: PaginatedMeta
 }
+
+/**
+ * Server-side task filters per api-design 4.7 — exact param names/semantics:
+ * case-insensitive search on title/description, exact enum matches, AND.
+ */
+export type TaskFilters = {
+  search?: string
+  status?: TaskStatus
+  type?: TaskType
+  priority?: TaskPriority
+}

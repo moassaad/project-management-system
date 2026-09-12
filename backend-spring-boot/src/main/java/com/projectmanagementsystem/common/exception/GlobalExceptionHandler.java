@@ -146,6 +146,18 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(com.projectmanagementsystem.project.exception.ProjectForbiddenException.class)
+    public ProblemDetail handleProjectForbidden(
+            com.projectmanagementsystem.project.exception.ProjectForbiddenException ex,
+            HttpServletRequest request) {
+        String detail = ex.getMessage() != null ? ex.getMessage() : "Access denied";
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, detail);
+        problem.setType(URI.create("https://api.example.com/problems/forbidden"));
+        problem.setTitle("Forbidden");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ProblemDetail handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(

@@ -64,23 +64,23 @@ public class ProjectController {
     }
 
     @GetMapping(value = "/{projectId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get project", description = "Returns a project by id")
+    @Operation(summary = "Get project", description = "Returns a project by id; members only")
     public ResponseEntity<Map<String, ProjectResponse>> get(@PathVariable UUID projectId) {
-        return ResponseEntity.ok(Map.of("data", projectService.get(projectId)));
+        return ResponseEntity.ok(Map.of("data", projectService.get(currentUserId(), projectId)));
     }
 
     @PatchMapping(value = "/{projectId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Update project", description = "Partially updates a project; null fields unchanged")
+    @Operation(summary = "Update project", description = "Partially updates a project; null fields unchanged; owner only")
     public ResponseEntity<Map<String, ProjectResponse>> patch(
             @PathVariable UUID projectId,
             @Valid @RequestBody UpdateProjectRequest req) {
-        return ResponseEntity.ok(Map.of("data", projectService.patch(projectId, req)));
+        return ResponseEntity.ok(Map.of("data", projectService.patch(currentUserId(), projectId, req)));
     }
 
     @DeleteMapping("/{projectId}")
-    @Operation(summary = "Delete project", description = "Deletes a project and its memberships")
+    @Operation(summary = "Delete project", description = "Deletes a project and its memberships; owner only")
     public ResponseEntity<Void> delete(@PathVariable UUID projectId) {
-        projectService.delete(projectId);
+        projectService.delete(currentUserId(), projectId);
         return ResponseEntity.noContent().build();
     }
 

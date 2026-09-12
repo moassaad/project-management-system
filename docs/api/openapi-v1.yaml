@@ -129,7 +129,7 @@ paths:
       tags:
       - projects
       summary: Get project
-      description: Returns a project by id
+      description: Returns a project by id; members only
       operationId: get
       parameters:
       - name: projectId
@@ -151,7 +151,7 @@ paths:
       tags:
       - projects
       summary: Delete project
-      description: Deletes a project and its memberships
+      description: Deletes a project and its memberships; owner only
       operationId: delete
       parameters:
       - name: projectId
@@ -167,7 +167,7 @@ paths:
       tags:
       - projects
       summary: Update project
-      description: Partially updates a project; null fields unchanged
+      description: Partially updates a project; null fields unchanged; owner only
       operationId: patch
       parameters:
       - name: projectId

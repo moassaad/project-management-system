@@ -9,8 +9,10 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.projectmanagementsystem.auth.exception.InvalidCredentialsException;
+import com.projectmanagementsystem.auth.exception.InvalidRefreshTokenException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -118,6 +120,50 @@ public class GlobalExceptionHandler {
                 "Invalid email or password");
         problem.setType(TYPE_UNAUTHORIZED);
         problem.setTitle("Unauthorized");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ProblemDetail handleInvalidRefreshToken(InvalidRefreshTokenException ex, HttpServletRequest request) {
+        String detail = ex.getMessage() != null ? ex.getMessage() : "Invalid or expired refresh token";
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, detail);
+        problem.setType(TYPE_UNAUTHORIZED);
+        problem.setTitle("Unauthorized");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ProblemDetail handleTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND, "The requested resource was not found.");
+        problem.setType(TYPE_RESOURCE_NOT_FOUND);
+        problem.setTitle("Resource not found");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
+    @ExceptionHandler(com.projectmanagementsystem.project.exception.ProjectForbiddenException.class)
+    public ProblemDetail handleProjectForbidden(
+            com.projectmanagementsystem.project.exception.ProjectForbiddenException ex,
+            HttpServletRequest request) {
+        String detail = ex.getMessage() != null ? ex.getMessage() : "Access denied";
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, detail);
+        problem.setType(URI.create("https://api.example.com/problems/forbidden"));
+        problem.setTitle("Forbidden");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        return problem;
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ProblemDetail handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage());
+        problem.setType(URI.create("https://api.example.com/problems/method-not-allowed"));
+        problem.setTitle("Method Not Allowed");
         problem.setInstance(URI.create(request.getRequestURI()));
         return problem;
     }

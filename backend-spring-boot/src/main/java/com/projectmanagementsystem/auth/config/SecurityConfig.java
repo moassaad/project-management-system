@@ -11,10 +11,12 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Security config — permit login/refresh, authenticate all other /api/v1/** via Bearer, stateless.
- * CORS handled via CorsConfig, CSRF via SameSite cookie + stateless (no session).
+ * CORS via CorsConfig wired into the chain (http.cors) so 401/403 error
+ * responses also carry CORS headers; CSRF via SameSite cookie + stateless (no session).
  */
 @Configuration
 @EnableWebSecurity
@@ -23,18 +25,22 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final JwtAuthenticationEntryPoint entryPoint;
     private final JwtAccessDeniedHandler accessDeniedHandler;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
                           JwtAuthenticationEntryPoint entryPoint,
-                          JwtAccessDeniedHandler accessDeniedHandler) {
+                          JwtAccessDeniedHandler accessDeniedHandler,
+                          CorsConfigurationSource corsConfigurationSource) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.entryPoint = entryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
+        this.corsConfigurationSource = corsConfigurationSource;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex

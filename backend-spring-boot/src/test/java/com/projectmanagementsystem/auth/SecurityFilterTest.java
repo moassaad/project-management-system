@@ -77,6 +77,26 @@ class SecurityFilterTest {
     }
 
     @Test
+    void me_401_includesCorsHeaders() throws Exception {
+        // Regression: 401 from the security entry point must carry CORS headers,
+        // otherwise browsers mask it as a CORS failure (bug #65).
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Origin", "http://localhost:5173"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+    }
+
+    @Test
+    void projects_401_includesCorsHeaders() throws Exception {
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Origin", "http://localhost:5173"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+    }
+
+    @Test
     void me_withValidToken_returns200() throws Exception {
         String email = "sec-" + UUID.randomUUID() + "@example.com";
         String pass = "Secret123!";
@@ -98,6 +118,14 @@ class SecurityFilterTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value(email));
+
+        // Success responses also carry CORS headers when Origin present
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token)
+                        .header("Origin", "http://localhost:5173"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
     }
 
     @Test

@@ -144,4 +144,81 @@ export const handlers = [
       }),
     ]
   })(),
+
+  // Members mocks — behavior-focused, contract-first for Sprint 006
+  // (backend BE-S006-01..03 not yet built). Member {id,email,role},
+  // list is plain {data} per Sprint 006 contract; owner cannot be removed.
+  ...(() => {
+    const OWNER_ID = '00000000-0000-4000-a000-000000000001'
+    const KNOWN_USERS = [
+      { id: OWNER_ID, email: 'test@example.com' },
+      { id: '00000000-0000-4000-a000-000000000002', email: 'member@example.com' },
+      { id: '00000000-0000-4000-a000-000000000003', email: 'new@example.com' },
+    ]
+    const membersByProject: Record<string, { id: string; email: string; role: string }[]> = {
+      '00000000-0000-4000-a000-000000000010': [
+        { id: OWNER_ID, email: 'test@example.com', role: 'OWNER' },
+        { id: '00000000-0000-4000-a000-000000000002', email: 'member@example.com', role: 'MEMBER' },
+      ],
+      '00000000-0000-4000-a000-000000000020': [
+        { id: OWNER_ID, email: 'test@example.com', role: 'OWNER' },
+      ],
+    }
+    const problem = (type: string, title: string, status: number, detail: string, instance: string, extra?: Record<string, unknown>) =>
+      HttpResponse.json(
+        { type: `https://api.example.com/problems/${type}`, title, status, detail, instance, ...extra },
+        { status, headers: { 'Content-Type': 'application/problem+json' } },
+      )
+    return [
+      http.get('*/api/v1/projects/:projectId/members', ({ params }) => {
+        const list = membersByProject[params.projectId as string]
+        if (!list) {
+          return problem('not-found', 'Not found', 404, 'Project not found', `/api/v1/projects/${params.projectId}/members`)
+        }
+        return HttpResponse.json({ data: list })
+      }),
+      http.post('*/api/v1/projects/:projectId/members', async ({ params, request }) => {
+        const projectId = params.projectId as string
+        const list = membersByProject[projectId]
+        if (!list) {
+          return problem('not-found', 'Not found', 404, 'Project not found', `/api/v1/projects/${projectId}/members`)
+        }
+        const body = (await request.json()) as { userId?: string; email?: string }
+        const userId = body.userId?.length ? body.userId : undefined
+        const email = body.email?.length ? body.email : undefined
+        if (!userId && !email) {
+          return problem('validation-error', 'Validation failed', 422, 'Invalid member', `/api/v1/projects/${projectId}/members`, {
+            errors: [{ detail: 'Provide a user ID or an email address', pointer: '#/email' }],
+          })
+        }
+        const known = KNOWN_USERS.find((u) => (userId ? u.id === userId : u.email === email))
+        if (!known) {
+          return problem('unknown-user', 'Unknown user', 404, 'User does not exist', `/api/v1/projects/${projectId}/members`)
+        }
+        if (list.some((m) => m.id === known.id)) {
+          return problem('already-member', 'Already a member', 409, 'User is already a project member', `/api/v1/projects/${projectId}/members`)
+        }
+        const created = { id: known.id, email: known.email, role: 'MEMBER' }
+        list.push(created)
+        return HttpResponse.json({ data: created }, { status: 201 })
+      }),
+      http.delete('*/api/v1/projects/:projectId/members/:userId', ({ params }) => {
+        const projectId = params.projectId as string
+        const userId = params.userId as string
+        const list = membersByProject[projectId]
+        if (!list) {
+          return problem('not-found', 'Not found', 404, 'Project not found', `/api/v1/projects/${projectId}/members/${userId}`)
+        }
+        const idx = list.findIndex((m) => m.id === userId)
+        if (idx === -1) {
+          return problem('not-found', 'Not found', 404, 'Member not found', `/api/v1/projects/${projectId}/members/${userId}`)
+        }
+        if (list[idx].role === 'OWNER') {
+          return problem('cannot-remove-owner', 'Cannot remove owner', 400, 'The project owner cannot be removed', `/api/v1/projects/${projectId}/members/${userId}`)
+        }
+        list.splice(idx, 1)
+        return new HttpResponse(null, { status: 204 })
+      }),
+    ]
+  })(),
 ]

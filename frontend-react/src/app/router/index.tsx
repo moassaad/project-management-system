@@ -6,11 +6,11 @@ import { ProjectCreatePage } from '../../features/projects/pages/ProjectCreatePa
 import { ProjectDetailsPage } from '../../features/projects/pages/ProjectDetailsPage.tsx'
 import { ProjectEditPage } from '../../features/projects/pages/ProjectEditPage.tsx'
 import { ProjectsPage } from '../../features/projects/pages/ProjectsPage.tsx'
-import {
-  DashboardPage,
-  NotFoundPage,
-  TaskDetailsPage,
-} from './placeholder.tsx'
+import { TaskCreatePage } from '../../features/tasks/pages/TaskCreatePage.tsx'
+import { TaskDetailsPage } from '../../features/tasks/pages/TaskDetailsPage.tsx'
+import { TaskEditPage } from '../../features/tasks/pages/TaskEditPage.tsx'
+import { TasksPage } from '../../features/tasks/pages/TasksPage.tsx'
+import { DashboardPage, NotFoundPage } from './placeholder.tsx'
 import { ProtectedRoute } from './protected-route.tsx'
 import { PublicRoute } from './public-route.tsx'
 
@@ -31,9 +31,15 @@ export const router = createBrowserRouter([
           { path: '/projects/new', element: <ProjectCreatePage /> },
           { path: '/projects/:projectId', element: <ProjectDetailsPage /> },
           { path: '/projects/:projectId/edit', element: <ProjectEditPage /> },
+          { path: '/projects/:projectId/tasks', element: <TasksPage /> },
+          { path: '/projects/:projectId/tasks/new', element: <TaskCreatePage /> },
           {
             path: '/projects/:projectId/tasks/:taskId',
             element: <TaskDetailsPage />,
+          },
+          {
+            path: '/projects/:projectId/tasks/:taskId/edit',
+            element: <TaskEditPage />,
           },
         ],
       },

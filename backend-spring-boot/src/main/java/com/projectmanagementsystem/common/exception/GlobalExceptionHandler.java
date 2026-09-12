@@ -182,6 +182,21 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(com.projectmanagementsystem.task.exception.TaskValidationException.class)
+    public ProblemDetail handleTaskValidation(
+            com.projectmanagementsystem.task.exception.TaskValidationException ex,
+            HttpServletRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNPROCESSABLE_ENTITY, "One or more fields are invalid.");
+        problem.setType(TYPE_VALIDATION_ERROR);
+        problem.setTitle("Validation failed");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setProperty("errors", List.of(Map.of(
+                "detail", ex.getMessage() != null ? ex.getMessage() : "Invalid value",
+                "pointer", "#/" + ex.getField())));
+        return problem;
+    }
+
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
     public ProblemDetail handleNotReadable(
             org.springframework.http.converter.HttpMessageNotReadableException ex,

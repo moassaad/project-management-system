@@ -12,4 +12,5 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Pr
     org.springframework.data.domain.Page<ProjectMember> findByUserId(
             UUID userId, org.springframework.data.domain.Pageable pageable);
     void deleteByProjectId(UUID projectId);
+    List<ProjectMember> findByProjectId(UUID projectId);
 }

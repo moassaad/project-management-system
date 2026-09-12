@@ -191,6 +191,31 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/schemas/ProjectResponse"
+  /api/v1/projects/{projectId}/members:
+    get:
+      tags:
+      - project-members
+      summary: List project members
+      description: Lists members with roles; members only
+      operationId: list_1
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ProjectMemberResponse"
   /api/v1/health:
     get:
       tags:
@@ -293,3 +318,12 @@ components:
           minLength: 0
         nameValid:
           type: boolean
+    ProjectMemberResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        role:
+          type: string

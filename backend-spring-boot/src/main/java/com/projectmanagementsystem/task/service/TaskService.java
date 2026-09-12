@@ -14,6 +14,7 @@ import com.projectmanagementsystem.task.entity.Task;
 import com.projectmanagementsystem.task.entity.TaskPriority;
 import com.projectmanagementsystem.task.entity.TaskStatus;
 import com.projectmanagementsystem.task.entity.TaskType;
+import com.projectmanagementsystem.task.exception.TaskBadRequestException;
 import com.projectmanagementsystem.task.exception.TaskValidationException;
 import com.projectmanagementsystem.task.repository.TaskRepository;
 import java.util.List;
@@ -72,12 +73,18 @@ public class TaskService {
     }
 
     @Transactional(readOnly = true)
-    public TaskPage list(UUID callerId, UUID projectId, int page, int perPage) {
+    public TaskPage list(UUID callerId, UUID projectId, int page, int perPage,
+                         String search, String status, String type, String priority) {
         findProject(projectId);
         requireMember(callerId, projectId);
         PageRequest pageable = PageRequest.of(page - 1, perPage,
                 Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Task> result = tasks.findByProjectId(projectId, pageable);
+        String like = search != null && !search.isBlank() ? search : null;
+        Page<Task> result = tasks.search(projectId, like,
+                parseFilterEnum(TaskStatus.class, status, "status"),
+                parseFilterEnum(TaskType.class, type, "type"),
+                parseFilterEnum(TaskPriority.class, priority, "priority"),
+                pageable);
         List<TaskResponse> data = result.getContent().stream()
                 .map(TaskResponse::from)
                 .toList();
@@ -169,6 +176,17 @@ public class TaskService {
             return Enum.valueOf(type, value);
         } catch (IllegalArgumentException | NullPointerException e) {
             throw new TaskValidationException(field, "Invalid " + field + ": " + value);
+        }
+    }
+
+    private <E extends Enum<E>> E parseFilterEnum(Class<E> type, String value, String field) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(type, value);
+        } catch (IllegalArgumentException e) {
+            throw new TaskBadRequestException("Invalid " + field + ": " + value);
         }
     }
 }

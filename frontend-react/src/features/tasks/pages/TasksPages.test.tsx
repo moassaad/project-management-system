@@ -6,6 +6,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 
 import { server } from '../../../../tests/mocks/server.ts'
+import { TaskCreatePage } from './TaskCreatePage.tsx'
 import { TaskDetailsPage } from './TaskDetailsPage.tsx'
 import { TasksPage } from './TasksPage.tsx'
 
@@ -19,6 +20,7 @@ function renderWithRouter(initialEntries: string[]) {
   const router = createMemoryRouter(
     [
       { path: '/projects/:projectId/tasks', element: <TasksPage /> },
+      { path: '/projects/:projectId/tasks/new', element: <TaskCreatePage /> },
       { path: '/projects/:projectId/tasks/:taskId', element: <TaskDetailsPage /> },
     ],
     { initialEntries },
@@ -54,6 +56,34 @@ describe('TasksPage', () => {
     renderWithRouter([`/projects/${ALPHA_ID}/tasks`])
 
     expect(await screen.findByText(/no tasks yet/i)).toBeInTheDocument()
+  })
+
+  it('New Task action navigates to the create form (behavior)', async () => {
+    const user = userEvent.setup()
+    renderWithRouter([`/projects/${ALPHA_ID}/tasks`])
+    await screen.findByText('Setup CI')
+
+    await user.click(screen.getByRole('link', { name: /^new task$/i }))
+
+    expect(await screen.findByRole('form', { name: /task form/i })).toBeInTheDocument()
+  })
+
+  it('New Task action is present in the empty state (behavior)', async () => {
+    server.use(
+      http.get('*/api/v1/projects/:projectId/tasks', () =>
+        HttpResponse.json({
+          data: [],
+          meta: { currentPage: 1, perPage: 20, total: 0, lastPage: 1 },
+        }),
+      ),
+    )
+    renderWithRouter([`/projects/${ALPHA_ID}/tasks`])
+
+    expect(await screen.findByText(/no tasks yet/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^new task$/i })).toHaveAttribute(
+      'href',
+      `/projects/${ALPHA_ID}/tasks/new`,
+    )
   })
 
   it('shows error state on server failure using status (behavior)', async () => {

@@ -37,6 +37,11 @@ const selectClassName =
  * State choice (FE-S010-01): local component state, not URL search params —
  * consistent with the existing local page state on this and the projects
  * list; no deep-link requirement in scope.
+ *
+ * The New Task action (FE-TASK-01) renders in the list/empty states only:
+ * non-members get the backend 403 error state instead (members may create
+ * per business-rules 2.4; backend remains authoritative, no extra
+ * membership query needed).
  */
 export function TasksPage() {
   const { projectId = '' } = useParams()
@@ -194,7 +199,15 @@ export function TasksPage() {
         >
           Back to project
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold text-gray-900">Tasks</h1>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-gray-900">Tasks</h1>
+          <Link
+            to={`/projects/${projectId}/tasks/new`}
+            className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            New Task
+          </Link>
+        </div>
         {filterControls}
         <Card className="mt-4">
           <CardContent>
@@ -217,7 +230,15 @@ export function TasksPage() {
       >
         Back to project
       </Link>
-      <h1 className="mt-3 text-2xl font-semibold text-gray-900">Tasks</h1>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-gray-900">Tasks</h1>
+        <Link
+          to={`/projects/${projectId}/tasks/new`}
+          className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          New Task
+        </Link>
+      </div>
       {filterControls}
       {meta ? (
         <p className="mt-3 text-sm text-gray-500" aria-live="polite">

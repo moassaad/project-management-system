@@ -128,13 +128,78 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/schemas/TaskResponse"
+  /api/v1/projects/{projectId}/tasks/{taskId}/comments:
+    get:
+      tags:
+      - comments
+      summary: List task comments
+      description: Lists comments in creation order; members only
+      operationId: list_2
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/CommentResponse"
+    post:
+      tags:
+      - comments
+      summary: Add task comment
+      description: Adds a comment as the caller; members only
+      operationId: create_2
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/CommentResponse"
   /api/v1/projects/{projectId}/members:
     get:
       tags:
       - project-members
       summary: List project members
       description: Lists members with roles; members only
-      operationId: list_2
+      operationId: list_3
       parameters:
       - name: projectId
         in: path
@@ -526,6 +591,25 @@ components:
         assigneeId:
           type: string
         dueDate:
+          type: string
+        createdAt:
+          type: string
+    CreateCommentRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+      required:
+      - content
+    CommentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        authorId:
           type: string
         createdAt:
           type: string

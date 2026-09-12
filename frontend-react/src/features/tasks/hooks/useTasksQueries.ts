@@ -7,7 +7,11 @@ import {
   listTasks,
   patchTask,
 } from '../api/tasks.api.ts'
-import type { CreateTaskRequest, UpdateTaskRequest } from '../types/task.types.ts'
+import type {
+  CreateTaskRequest,
+  TaskFilters,
+  UpdateTaskRequest,
+} from '../types/task.types.ts'
 
 /**
  * TanStack Query hooks for tasks — server-state ownership (not Zustand).
@@ -18,17 +22,22 @@ import type { CreateTaskRequest, UpdateTaskRequest } from '../types/task.types.t
 export const taskKeys = {
   all: ['tasks'] as const,
   lists: () => [...taskKeys.all, 'list'] as const,
-  list: (projectId: string, page: number, perPage: number) =>
-    [...taskKeys.lists(), projectId, { page, perPage }] as const,
+  list: (projectId: string, page: number, perPage: number, filters: TaskFilters = {}) =>
+    [...taskKeys.lists(), projectId, { page, perPage, ...filters }] as const,
   details: () => [...taskKeys.all, 'detail'] as const,
   detail: (projectId: string, taskId: string) =>
     [...taskKeys.details(), projectId, taskId] as const,
 }
 
-export function useTasksQuery(projectId: string, page = 1, perPage = 20) {
+export function useTasksQuery(
+  projectId: string,
+  page = 1,
+  perPage = 20,
+  filters: TaskFilters = {},
+) {
   return useQuery({
-    queryKey: taskKeys.list(projectId, page, perPage),
-    queryFn: () => listTasks(projectId, { page, perPage }),
+    queryKey: taskKeys.list(projectId, page, perPage, filters),
+    queryFn: () => listTasks(projectId, { page, perPage, ...filters }),
     enabled: !!projectId,
   })
 }

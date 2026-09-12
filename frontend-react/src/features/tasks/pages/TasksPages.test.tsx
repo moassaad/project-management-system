@@ -35,9 +35,10 @@ describe('TasksPage', () => {
 
     expect(await screen.findByText('Setup CI')).toBeInTheDocument()
     expect(screen.getByText('Fix login bug')).toBeInTheDocument()
-    expect(screen.getByText('TODO')).toBeInTheDocument()
-    expect(screen.getByText('HIGH')).toBeInTheDocument()
-    expect(screen.getByText('FEATURE')).toBeInTheDocument()
+    // Badges are <span>; the filter <option>s share the same text.
+    expect(screen.getByText('TODO', { selector: 'span' })).toBeInTheDocument()
+    expect(screen.getByText('HIGH', { selector: 'span' })).toBeInTheDocument()
+    expect(screen.getByText('FEATURE', { selector: 'span' })).toBeInTheDocument()
   })
 
   it('shows empty state when no tasks (behavior)', async () => {

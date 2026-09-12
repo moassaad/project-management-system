@@ -4,6 +4,7 @@ import type {
   CreateTaskRequest,
   PaginatedTasks,
   Task,
+  TaskFilters,
   UpdateTaskRequest,
 } from '../types/task.types.ts'
 
@@ -17,12 +18,17 @@ type PaginatedWrapped<T> = { data: T[]; meta: PaginatedTasks['meta'] }
 
 export async function listTasks(
   projectId: string,
-  params: { page?: number; perPage?: number } = {},
+  params: { page?: number; perPage?: number } & TaskFilters = {},
 ): Promise<PaginatedTasks> {
   const res = await httpClient.get<PaginatedWrapped<Task>>(`/projects/${projectId}/tasks`, {
     params: {
       page: params.page ?? 1,
       perPage: params.perPage ?? 20,
+      // Axios omits undefined — only active filters travel as query params.
+      search: params.search,
+      status: params.status,
+      type: params.type,
+      priority: params.priority,
     },
   })
   return { data: res.data.data, meta: res.data.meta }

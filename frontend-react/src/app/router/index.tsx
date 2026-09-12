@@ -2,11 +2,11 @@ import { createBrowserRouter, Navigate } from 'react-router'
 
 import { App } from '../App.tsx'
 import { LoginPage } from '../../features/auth/pages/LoginPage.tsx'
+import { ProjectDetailsPage } from '../../features/projects/pages/ProjectDetailsPage.tsx'
+import { ProjectsPage } from '../../features/projects/pages/ProjectsPage.tsx'
 import {
   DashboardPage,
   NotFoundPage,
-  ProjectDetailsPage,
-  ProjectsPage,
   TaskDetailsPage,
 } from './placeholder.tsx'
 import { ProtectedRoute } from './protected-route.tsx'

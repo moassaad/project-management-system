@@ -79,6 +79,12 @@ export function TasksPage() {
           Back to project
         </Link>
         <h1 className="mt-3 text-2xl font-semibold text-gray-900">Tasks</h1>
+        <Link
+        to={`/projects/${projectId}/tasks/new`}
+        className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      >
+        New Task
+      </Link>
         <Card className="mt-4">
           <CardContent>
             <p className="text-sm text-gray-600">No tasks yet.</p>
@@ -97,6 +103,12 @@ export function TasksPage() {
         Back to project
       </Link>
       <h1 className="mt-3 text-2xl font-semibold text-gray-900">Tasks</h1>
+      <Link
+        to={`/projects/${projectId}/tasks/new`}
+        className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      >
+        New Task
+      </Link>
       <ul className="mt-4 space-y-3">
         {tasks.map((task) => (
           <li key={task.id}>

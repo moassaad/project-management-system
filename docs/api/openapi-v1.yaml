@@ -7,6 +7,60 @@ info:
 servers:
 - url: /
 paths:
+  /api/v1/projects:
+    get:
+      tags:
+      - projects
+      summary: List projects
+      description: "Lists projects the caller is a member of, paginated"
+      operationId: list
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: perPage
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+    post:
+      tags:
+      - projects
+      summary: Create project
+      description: Creates a project; creator becomes owner and member
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/ProjectResponse"
   /api/v1/auth/refresh:
     post:
       tags:
@@ -70,6 +124,73 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/schemas/LoginResponse"
+  /api/v1/projects/{projectId}:
+    get:
+      tags:
+      - projects
+      summary: Get project
+      description: Returns a project by id
+      operationId: get
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/ProjectResponse"
+    delete:
+      tags:
+      - projects
+      summary: Delete project
+      description: Deletes a project and its memberships
+      operationId: delete
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags:
+      - projects
+      summary: Update project
+      description: Partially updates a project; null fields unchanged
+      operationId: patch
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/ProjectResponse"
   /api/v1/health:
     get:
       tags:
@@ -105,6 +226,32 @@ paths:
                   additionalProperties: {}
 components:
   schemas:
+    CreateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - name
+    ProjectResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        ownerId:
+          type: string
+        createdAt:
+          type: string
     LoginRequest:
       type: object
       properties:
@@ -133,3 +280,16 @@ components:
           format: uuid
         email:
           type: string
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 255
+          minLength: 0
+        nameValid:
+          type: boolean

@@ -2,6 +2,8 @@ import axios from 'axios'
 
 import { config } from '../../config/env.ts'
 import { useAuthStore } from '../store/auth-store.ts'
+import { hasSessionHint } from './sessionHint.ts'
+import { isTokenExpired } from './tokenExpiry.ts'
 
 /**
  * Shared Axios HTTP client per FE-S003-05 and docs/architecture/system-architecture.md:313-449.
@@ -9,8 +11,9 @@ import { useAuthStore } from '../store/auth-store.ts'
  * Responsibilities (shared infrastructure only):
  *  - baseURL from typed `config.apiUrl` (no hard-coded URL, no direct import.meta.env in components)
  *  - common headers (`Content-Type: application/json`)
- *  - auth header placeholder (`Authorization: Bearer <token>` from memory — no token yet, structure only)
+ *  - `Authorization: Bearer <token>` from memory-only store (never persisted)
  *  - `withCredentials: true` for refresh HttpOnly Secure Cookie (docs/api/api-design.md:592)
+ *  - proactive refresh for provably-expired JWTs + guarded single retry on 401
  *  - common response/error handling — RFC 9457 `application/problem+json` passthrough (no swallowing)
  *
  * Must NOT contain business operations (createProject, etc.) — those belong to feature API layers
@@ -34,37 +37,16 @@ const rawRefreshClient = axios.create({
 })
 
 // Attach Authorization header from memory-only store (no persistence).
-httpClient.interceptors.request.use((requestConfig) => {
-  const token = useAuthStore.getState().accessToken
-  if (token) {
-    // Axios v1 headers is AxiosHeaders object; set safely for both object and AxiosHeaders types
-    const headers = requestConfig.headers as unknown as Record<string, string> & {
-      set?: (name: string, value: string) => void
-    }
-    if (headers && typeof headers.set === 'function') {
-      headers.set('Authorization', `Bearer ${token}`)
-    } else if (headers) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
+// Axios v1 headers is AxiosHeaders object; set safely for both object and AxiosHeaders types.
+function setAuthHeader(headers: unknown, token: string): void {
+  const writable = headers as unknown as Record<string, string> & {
+    set?: (name: string, value: string) => void
   }
-  return requestConfig
-})
-
-// 401 refresh handling — concurrent queue, single refresh, redirect on failure.
-type FailedQueueItem = {
-  resolve: (token: string) => void
-  reject: (error: unknown) => void
-}
-
-let isRefreshing = false
-let failedQueue: FailedQueueItem[] = []
-
-function processQueue(error: unknown, token: string | null) {
-  failedQueue.forEach((prom) => {
-    if (token) prom.resolve(token)
-    else prom.reject(error)
-  })
-  failedQueue = []
+  if (writable && typeof writable.set === 'function') {
+    writable.set('Authorization', `Bearer ${token}`)
+  } else if (writable) {
+    writable['Authorization'] = `Bearer ${token}`
+  }
 }
 
 function isAuthRefreshUrl(url?: string): boolean {
@@ -75,6 +57,69 @@ function isAuthLoginUrl(url?: string): boolean {
   return !!url && url.includes('/auth/login')
 }
 
+// Shared single-flight refresh — one mechanism for the proactive path
+// (expired token before a request) and the reactive path (401 after a
+// request). Concurrent callers share the same promise: at most one
+// POST /auth/refresh is ever in flight. Resolves with the new token, or null
+// when no refresh is possible (no session) or it failed (auth cleared +
+// login redirect already performed). The refresh call itself uses the raw
+// client (no interceptors) so it is never retried — infinite loops impossible.
+let refreshInflight: Promise<string | null> | null = null
+
+function hasRefreshableSession(): boolean {
+  return !!useAuthStore.getState().accessToken || hasSessionHint()
+}
+
+export function refreshAccessTokenShared(): Promise<string | null> {
+  if (!hasRefreshableSession()) {
+    return Promise.resolve(null)
+  }
+  if (!refreshInflight) {
+    refreshInflight = rawRefreshClient
+      .post<{ data: { accessToken: string } }>('/auth/refresh')
+      .then((res) => {
+        // Refresh token is HttpOnly cookie — withCredentials sends it automatically, never read via JS.
+        const newToken = res.data.data.accessToken
+        useAuthStore.getState().setAccessToken(newToken)
+        return newToken as string | null
+      })
+      .catch(() => {
+        useAuthStore.getState().clearAuth()
+        // Redirect to login — backend is authoritative, frontend UX only.
+        // Avoid redirect loop if already on /login.
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
+        return null
+      })
+      .finally(() => {
+        refreshInflight = null
+      })
+  }
+  return refreshInflight
+}
+
+// Proactive refresh: a provably-expired JWT is refreshed before the
+// authenticated request goes out; valid (or opaque) tokens are sent normally.
+// Login/refresh never trigger a refresh.
+httpClient.interceptors.request.use(async (requestConfig) => {
+  const url = requestConfig.url ?? ''
+  if (!isAuthLoginUrl(url) && !isAuthRefreshUrl(url)) {
+    const token = useAuthStore.getState().accessToken
+    if (token && isTokenExpired(token)) {
+      await refreshAccessTokenShared()
+    }
+  }
+  const current = useAuthStore.getState().accessToken
+  if (current) {
+    setAuthHeader(requestConfig.headers, current)
+  }
+  return requestConfig
+})
+
+// Reactive refresh: an authenticated 401 triggers at most one refresh +
+// one retry. Refresh/login themselves and already-retried requests are
+// never retried.
 httpClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -82,7 +127,6 @@ httpClient.interceptors.response.use(
     const status: number | undefined = error.response?.status
     const requestUrl: string | undefined = originalRequest?.url
 
-    // Only handle 401, not for refresh/login itself, and not already retried.
     const shouldRefresh =
       status === 401 &&
       originalRequest &&
@@ -95,56 +139,12 @@ httpClient.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    if (isRefreshing) {
-      // Queue concurrent 401s — single refresh
-      return new Promise<string>((resolve, reject) => {
-        failedQueue.push({ resolve, reject })
-      })
-        .then((token) => {
-          const headers = originalRequest.headers as unknown as Record<string, string> & {
-            set?: (name: string, value: string) => void
-          }
-          if (headers && typeof headers.set === 'function') {
-            headers.set('Authorization', `Bearer ${token}`)
-          } else if (headers) {
-            headers['Authorization'] = `Bearer ${token}`
-          }
-          originalRequest._retry = true
-          return httpClient(originalRequest)
-        })
-        .catch((queueError) => Promise.reject(queueError))
-    }
-
     originalRequest._retry = true
-    isRefreshing = true
-
-    try {
-      // Refresh token is HttpOnly cookie — withCredentials sends it automatically, never read via JS.
-      const res = await rawRefreshClient.post<{ data: { accessToken: string } }>('/auth/refresh')
-      const newToken = res.data.data.accessToken
-      useAuthStore.getState().setAccessToken(newToken)
-      processQueue(null, newToken)
-
-      const headers = originalRequest.headers as unknown as Record<string, string> & {
-        set?: (name: string, value: string) => void
-      }
-      if (headers && typeof headers.set === 'function') {
-        headers.set('Authorization', `Bearer ${newToken}`)
-      } else if (headers) {
-        headers['Authorization'] = `Bearer ${newToken}`
-      }
-      return httpClient(originalRequest)
-    } catch (refreshError) {
-      processQueue(refreshError, null)
-      useAuthStore.getState().clearAuth()
-      // Redirect to login — backend is authoritative, frontend UX only.
-      // Avoid redirect loop if already on /login.
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
-      return Promise.reject(refreshError)
-    } finally {
-      isRefreshing = false
+    const token = await refreshAccessTokenShared()
+    if (!token) {
+      return Promise.reject(error)
     }
+    setAuthHeader(originalRequest.headers, token)
+    return httpClient(originalRequest)
   },
 )

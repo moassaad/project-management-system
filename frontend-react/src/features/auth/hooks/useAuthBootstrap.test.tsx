@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { setSessionHint } from '../../../lib/http/sessionHint.ts'
 import { server } from '../../../../tests/mocks/server.ts'
 import { useAuthStore } from '../store/authStore.ts'
 import { useAuthBootstrap } from './useAuthBootstrap.ts'
@@ -59,6 +60,7 @@ describe('useAuthBootstrap refresh-first (behavior)', () => {
 
   it('refreshes first, then loads user only with a token (behavior)', async () => {
     useRecordingHandlers()
+    setSessionHint()
     render(<Probe />)
 
     await screen.findByText('settled')
@@ -70,6 +72,7 @@ describe('useAuthBootstrap refresh-first (behavior)', () => {
 
   it('never calls /me when refresh fails; clears auth (behavior)', async () => {
     useRecordingHandlers(401)
+    setSessionHint()
     render(<Probe />)
 
     await screen.findByText('settled')
@@ -100,8 +103,18 @@ describe('useAuthBootstrap refresh-first (behavior)', () => {
     expect(calls).toEqual([])
   })
 
+  it('makes no calls when no session hint exists (behavior)', async () => {
+    useRecordingHandlers()
+    render(<Probe />)
+
+    await screen.findByText('settled')
+    expect(calls).toEqual([])
+    expect(useAuthStore.getState().isAuthenticated).toBe(false)
+  })
+
   it('concurrent mounts share one refresh/me round-trip (behavior)', async () => {
     useRecordingHandlers()
+    setSessionHint()
     render(
       <>
         <Probe />

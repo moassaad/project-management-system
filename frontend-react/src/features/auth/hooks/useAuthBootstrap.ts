@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 
+import { hasSessionHint } from '../../../lib/http/sessionHint.ts'
 import { useAuthStore } from '../store/authStore.ts'
 import { me, refresh } from '../api/auth.api.ts'
 
@@ -54,7 +55,13 @@ export function useAuthBootstrap() {
       }
 
       // No token — refresh-first via HttpOnly cookie (withCredentials);
-      // GET /me only runs after a token is obtained.
+      // GET /me only runs after a token is obtained. With no session hint
+      // (fresh tab, never authenticated), skip refresh entirely instead of
+      // producing connection noise against a possibly-absent backend.
+      if (!hasSessionHint()) {
+        if (!cancelled) setBootstrapping(false)
+        return
+      }
       try {
         const { accessToken: newToken } = await refresh()
         if (!cancelled) setAccessToken(newToken)

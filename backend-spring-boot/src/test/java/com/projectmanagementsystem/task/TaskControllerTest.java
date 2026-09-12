@@ -261,8 +261,9 @@ class TaskControllerTest {
     void delete_returns204() throws Exception {
         String id = createTask("Gone");
 
+        // Owner may delete any task (assignee refinement in TaskAuthorizationTest)
         mockMvc.perform(delete(base() + "/" + id)
-                        .header("Authorization", bearer(member)))
+                        .header("Authorization", bearer(owner)))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get(base() + "/" + id)

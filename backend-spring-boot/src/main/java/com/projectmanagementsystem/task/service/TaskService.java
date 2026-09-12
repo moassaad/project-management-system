@@ -25,8 +25,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Task use cases — all operations require project membership (403 otherwise).
- * Owner/assignee write refinement is BE-S007-03; unknown ids are 404.
+ * Task use cases — backend is the final authority: all operations require
+ * project membership (403 otherwise); edit/delete require project ownership
+ * or task assignment (403 otherwise); unknown ids are 404.
  */
 @Service
 public class TaskService {
@@ -95,6 +96,7 @@ public class TaskService {
         findProject(projectId);
         requireMember(callerId, projectId);
         Task task = findTask(projectId, taskId);
+        requireOwnerOrAssignee(callerId, task);
         if (req.title() != null) {
             task.setTitle(req.title());
         }
@@ -123,8 +125,10 @@ public class TaskService {
     public void delete(UUID callerId, UUID projectId, UUID taskId) {
         findProject(projectId);
         requireMember(callerId, projectId);
+        Task task = findTask(projectId, taskId);
+        requireOwnerOrAssignee(callerId, task);
         // No comment table yet (Sprint 008) — nothing else to cascade.
-        tasks.delete(findTask(projectId, taskId));
+        tasks.delete(task);
     }
 
     private Project findProject(UUID projectId) {
@@ -140,6 +144,14 @@ public class TaskService {
     private void requireMember(UUID userId, UUID projectId) {
         if (!members.existsByProjectIdAndUserId(projectId, userId)) {
             throw new ProjectForbiddenException("Only project members may access this project");
+        }
+    }
+
+    private void requireOwnerOrAssignee(UUID userId, Task task) {
+        boolean owner = task.getProject().getOwner().getId().equals(userId);
+        boolean assignee = task.getAssignee() != null && task.getAssignee().getId().equals(userId);
+        if (!owner && !assignee) {
+            throw new ProjectForbiddenException("Only the project owner or assignee may modify this task");
         }
     }
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import type { User } from '../../features/auth/types/auth.types.ts'
+import { clearSessionHint, setSessionHint } from '../http/sessionHint.ts'
 
 /**
  * Shared client state for authentication — memory-only Access Token + User.
@@ -45,10 +46,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isBootstrapping: true,
-  setAuth: (user: User, token: string) =>
-    set({ user, accessToken: token, isAuthenticated: true }),
-  setAccessToken: (token: string) =>
-    set({ accessToken: token, isAuthenticated: true }),
-  clearAuth: () => set({ accessToken: null, user: null, isAuthenticated: false }),
+  setAuth: (user: User, token: string) => {
+    setSessionHint()
+    set({ user, accessToken: token, isAuthenticated: true })
+  },
+  setAccessToken: (token: string) => {
+    setSessionHint()
+    set({ accessToken: token, isAuthenticated: true })
+  },
+  clearAuth: () => {
+    clearSessionHint()
+    set({ accessToken: null, user: null, isAuthenticated: false })
+  },
   setBootstrapping: (value: boolean) => set({ isBootstrapping: value }),
 }))

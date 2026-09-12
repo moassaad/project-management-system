@@ -2,6 +2,7 @@ package com.projectmanagementsystem.auth.controller;
 
 import com.projectmanagementsystem.auth.dto.LoginRequest;
 import com.projectmanagementsystem.auth.dto.LoginResponse;
+import com.projectmanagementsystem.auth.exception.InvalidRefreshTokenException;
 import com.projectmanagementsystem.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -109,7 +110,8 @@ public class AuthController {
     public ResponseEntity<Map<String, Map<String, Object>>> me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
-            return ResponseEntity.status(401).build();
+            // RFC 9457 ProblemDetails (was empty-body 401); CORS headers via security chain
+            throw new InvalidRefreshTokenException("Authentication required");
         }
         UUID userId = UUID.fromString(authentication.getPrincipal().toString());
         User user = authService.getMe(userId);

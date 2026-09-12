@@ -109,15 +109,21 @@ class AuthMeLogoutTest {
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
                 .andExpect(jsonPath("$.type").value("https://api.example.com/problems/unauthorized"))
                 .andExpect(jsonPath("$.title").value("Unauthorized"))
-                .andExpect(jsonPath("$.status").value(401));
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.detail").isNotEmpty())
+                .andExpect(jsonPath("$.instance").value("/api/v1/auth/me"));
     }
 
     @Test
-    void me_invalidToken_returns401() throws Exception {
+    void me_invalidToken_returns401WithCorsHeaders() throws Exception {
         mockMvc.perform(get("/api/v1/auth/me")
-                        .header("Authorization", "Bearer invalid.token.here"))
+                        .header("Authorization", "Bearer invalid.token.here")
+                        .header("Origin", "http://localhost:5173"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/unauthorized"))
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
     }
 
     @Test

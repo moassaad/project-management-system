@@ -62,7 +62,15 @@ export function ProjectsPage() {
   if (projects.length === 0) {
     return (
       <section aria-label="Projects">
-        <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
+          <Link
+            to="/projects/new"
+            className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            New Project
+          </Link>
+        </div>
         <Card className="mt-4">
           <CardContent>
             <p className="text-sm text-gray-600">No projects yet.</p>
@@ -74,7 +82,15 @@ export function ProjectsPage() {
 
   return (
     <section aria-label="Projects">
-      <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
+        <Link
+          to="/projects/new"
+          className="inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          New Project
+        </Link>
+      </div>
       <ul className="mt-4 space-y-3">
         {projects.map((project) => (
           <li key={project.id}>

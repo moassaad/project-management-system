@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Button } from '../../../components/ui/Button.tsx'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card.tsx'
 import { useAuthStore } from '../../auth/store/authStore.ts'
+import { MembersSection } from '../../members/components/MembersSection.tsx'
 import { useDeleteProjectMutation, useProjectQuery } from '../hooks/useProjectsQueries.ts'
 
 function getStatus(error: unknown): number | undefined {
@@ -147,6 +148,7 @@ export function ProjectDetailsPage() {
           ) : null}
         </CardContent>
       </Card>
+      <MembersSection projectId={projectId} isOwner={isOwner} />
       {isOwner && confirmingDelete ? (
         <div
           role="alertdialog"

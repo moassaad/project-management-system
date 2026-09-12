@@ -9,11 +9,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.projectmanagementsystem.auth.entity.User;
 import com.projectmanagementsystem.auth.repository.UserRepository;
+import com.projectmanagementsystem.auth.service.JwtService;
+import com.projectmanagementsystem.auth.service.RefreshTokenService;
 import jakarta.servlet.http.Cookie;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -33,6 +36,12 @@ class AuthRefreshTest {
 
     @Autowired
     private PasswordEncoder encoder;
+
+    @Autowired
+    private RefreshTokenService refreshTokenService;
+
+    @Value("${app.jwt.secret:${JWT_SECRET:dev-secret-must-be-at-least-64-bytes-long-for-hs512-change-me-in-prod-0123456789}}")
+    private String jwtSecret;
 
     private String email;
     private String password;
@@ -144,5 +153,69 @@ class AuthRefreshTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
                 .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+    }
+
+    @Test
+    void refresh_expiredToken_returns401() throws Exception {
+        // Craft an already-expired refresh JWT (negative lifetime) for the existing user
+        User user = users.findByEmail(email).orElseThrow();
+        JwtService expiredJwt = new JwtService(jwtSecret, 900000, -1000);
+        String expired = expiredJwt.generateRefreshToken(user.getId(), UUID.randomUUID());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .cookie(new Cookie("refreshToken", expired))
+                        .header("Origin", "http://localhost:5173"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.type").value("https://api.example.com/problems/unauthorized"))
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+    }
+
+    @Test
+    void refresh_invalidToken_returns401WithCorsHeaders() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .cookie(new Cookie("refreshToken", "invalid.token.here"))
+                        .header("Origin", "http://localhost:5173"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+    }
+
+    @Test
+    void refresh_rotation_revokesOldAndStoresNew() throws Exception {
+        String refreshToken = loginAndGetRefreshCookie();
+        org.assertj.core.api.Assertions.assertThat(refreshTokenService.isValid(refreshToken)).isTrue();
+
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/refresh")
+                        .cookie(new Cookie("refreshToken", refreshToken)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String newRefresh = result.getResponse().getCookie("refreshToken").getValue();
+
+        // Old revoked, new stored and valid
+        org.assertj.core.api.Assertions.assertThat(refreshTokenService.isValid(refreshToken)).isFalse();
+        org.assertj.core.api.Assertions.assertThat(refreshTokenService.isValid(newRefresh)).isTrue();
+    }
+
+    @Test
+    void refresh_cookieAttributes_verified() throws Exception {
+        String body = """
+                {"email":"%s","password":"%s"}
+                """.formatted(email, password);
+        MvcResult login = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andReturn();
+        String setCookie = login.getResponse().getHeader("Set-Cookie");
+        org.assertj.core.api.Assertions.assertThat(setCookie).contains("refreshToken=");
+        org.assertj.core.api.Assertions.assertThat(setCookie).contains("HttpOnly");
+        org.assertj.core.api.Assertions.assertThat(setCookie).contains("SameSite=Strict");
+        org.assertj.core.api.Assertions.assertThat(setCookie).contains("Path=/api/v1/auth/refresh");
+        org.assertj.core.api.Assertions.assertThat(setCookie).contains("Max-Age=604800");
+        // Secure=true by default (dropped by browsers on local plain-HTTP dev;
+        // env-conditional Secure is a pending owner-approved security decision, default unchanged)
+        org.assertj.core.api.Assertions.assertThat(setCookie).contains("Secure");
     }
 }

@@ -18,4 +18,11 @@ export type DashboardData = {
   projects: Project[]
   myTasks: Task[]
   counts: DashboardCounts
+  /**
+   * Resilience metadata (FE-DASH-01): project ids whose task fetch failed
+   * (skipped, counts derived from loaded data) and whether pagination caps
+   * truncated the dataset (counts then approximate — MVP limitation).
+   */
+  failedProjectIds: string[]
+  truncated: boolean
 }

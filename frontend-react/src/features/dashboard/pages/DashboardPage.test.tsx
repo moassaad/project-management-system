@@ -75,6 +75,28 @@ describe('DashboardPage (behavior)', () => {
     expect(screen.getByText(/no tasks assigned to you/i)).toBeInTheDocument()
   })
 
+  it('shows a non-blocking notice on partial task failure (behavior)', async () => {
+    signInAsMember()
+    server.use(
+      http.get('*/api/v1/projects/00000000-0000-4000-a000-000000000020/tasks', () =>
+        HttpResponse.json(
+          {
+            type: 'https://api.example.com/problems/server-error',
+            title: 'Server error',
+            status: 500,
+            detail: 'boom',
+            instance: '/api/v1/projects/00000000-0000-4000-a000-000000000020/tasks',
+          },
+          { status: 500, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    renderWithRouter()
+
+    expect(await screen.findByText('Alpha Project')).toBeInTheDocument()
+    expect(screen.getByText(/couldn.t be loaded; showing partial data/i)).toBeInTheDocument()
+  })
+
   it('shows error state on server failure using status (behavior)', async () => {
     signInAsMember()
     server.use(

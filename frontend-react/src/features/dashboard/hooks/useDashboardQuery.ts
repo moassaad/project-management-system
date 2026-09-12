@@ -25,30 +25,46 @@ export const dashboardKeys = {
   summary: (userId: string) => [...dashboardKeys.all, 'summary', userId] as const,
 }
 
-async function listAllProjects(): Promise<Project[]> {
+async function listAllProjects(): Promise<{ projects: Project[]; truncated: boolean }> {
   const all: Project[] = []
   for (let page = 1; page <= MAX_PROJECT_PAGES; page += 1) {
     const res = await listProjects({ page, perPage: PROJECTS_PER_PAGE })
     all.push(...res.data)
-    if (page >= res.meta.lastPage) break
+    if (page >= res.meta.lastPage) return { projects: all, truncated: false }
   }
-  return all
+  // Cap hit with more pages available — dataset truncated (MVP limitation).
+  return { projects: all, truncated: true }
 }
 
-async function listProjectTasks(projectId: string): Promise<Task[]> {
+async function listProjectTasks(
+  projectId: string,
+): Promise<{ tasks: Task[]; truncated: boolean }> {
   const all: Task[] = []
   for (let page = 1; page <= MAX_TASK_PAGES; page += 1) {
     const res = await listTasks(projectId, { page, perPage: TASKS_PER_PAGE })
     all.push(...res.data)
-    if (page >= res.meta.lastPage) break
+    if (page >= res.meta.lastPage) return { tasks: all, truncated: false }
   }
-  return all
+  return { tasks: all, truncated: true }
 }
 
 async function buildDashboard(userId: string): Promise<DashboardData> {
-  const projects = await listAllProjects()
-  const taskLists = await Promise.all(projects.map((p) => listProjectTasks(p.id)))
-  const tasks = taskLists.flat()
+  // Projects failure still fails the whole dashboard (nothing to show).
+  const { projects, truncated: projectsTruncated } = await listAllProjects()
+  // Per-project isolation: one project's task failure must not reject the
+  // dashboard — failed projects are skipped, counts derive from loaded data.
+  const settled = await Promise.allSettled(projects.map((p) => listProjectTasks(p.id)))
+  const tasks: Task[] = []
+  const failedProjectIds: string[] = []
+  let truncated = projectsTruncated
+  settled.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      tasks.push(...result.value.tasks)
+      truncated = truncated || result.value.truncated
+    } else {
+      failedProjectIds.push(projects[index].id)
+    }
+  })
   return {
     projects,
     myTasks: tasks.filter((t) => t.assigneeId === userId),
@@ -58,6 +74,8 @@ async function buildDashboard(userId: string): Promise<DashboardData> {
       todoCount: tasks.filter((t) => t.status === 'TODO').length,
       doneCount: tasks.filter((t) => t.status === 'DONE').length,
     },
+    failedProjectIds,
+    truncated,
   }
 }
 

@@ -70,6 +70,18 @@ export function DashboardPage() {
     <section aria-label="Dashboard">
       <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
 
+      {data && data.failedProjectIds.length > 0 ? (
+        <p role="note" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Tasks for {data.failedProjectIds.length} project(s) couldn&apos;t be loaded; showing
+          partial data.
+        </p>
+      ) : null}
+      {data && data.truncated ? (
+        <p className="mt-3 text-xs italic text-gray-500">
+          Counts are approximate: large datasets are truncated in this view.
+        </p>
+      ) : null}
+
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Dashboard counts">
         {stats.map((stat) => (
           <Card key={stat.label}>

@@ -148,6 +148,14 @@ export function ProjectDetailsPage() {
           ) : null}
         </CardContent>
       </Card>
+      <div className="mt-4">
+        <Link
+          to={`/projects/${projectId}/tasks`}
+          className="inline-flex h-10 items-center rounded-md border border-gray-300 bg-gray-100 px-4 text-sm font-medium text-gray-900 hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+          View tasks
+        </Link>
+      </div>
       <MembersSection projectId={projectId} isOwner={isOwner} />
       {isOwner && confirmingDelete ? (
         <div

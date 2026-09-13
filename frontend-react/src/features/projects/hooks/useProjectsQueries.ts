@@ -43,6 +43,7 @@ export function useCreateProjectMutation() {
     mutationFn: (payload: CreateProjectRequest) => createProject(payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -54,6 +55,7 @@ export function useUpdateProjectMutation(projectId: string) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
       void qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -64,6 +66,7 @@ export function useDeleteProjectMutation() {
     mutationFn: (projectId: string) => deleteProject(projectId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

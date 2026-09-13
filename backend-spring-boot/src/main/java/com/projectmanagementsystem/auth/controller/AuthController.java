@@ -31,9 +31,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final boolean refreshCookieSecure;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService,
+                          @org.springframework.beans.factory.annotation.Value("${app.auth.refresh-cookie-secure:true}")
+                          boolean refreshCookieSecure) {
         this.authService = authService;
+        this.refreshCookieSecure = refreshCookieSecure;
     }
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -41,12 +45,9 @@ public class AuthController {
     public ResponseEntity<Map<String, LoginResponse>> login(@Valid @RequestBody LoginRequest req) {
         AuthService.LoginResult result = authService.login(req.email(), req.password());
 
-        // Refresh cookie: HttpOnly, Secure, SameSite=Strict, Path=/api/v1/auth/refresh, Max-Age 7d
-        // Secure=true requires HTTPS; for local dev without HTTPS, cookie still set but browser may ignore Secure on http
-        // We set Secure=true per spec; withCredentials CORS handles it
         ResponseCookie cookie = ResponseCookie.from("refreshToken", result.refreshToken())
                 .httpOnly(true)
-                .secure(true)
+                .secure(refreshCookieSecure)
                 .sameSite("Strict")
                 .path("/api/v1/auth/refresh")
                 .maxAge(Duration.ofDays(7))
@@ -65,7 +66,7 @@ public class AuthController {
 
         ResponseCookie cookie = ResponseCookie.from("refreshToken", result.refreshToken())
                 .httpOnly(true)
-                .secure(true)
+                .secure(refreshCookieSecure)
                 .sameSite("Strict")
                 .path("/api/v1/auth/refresh")
                 .maxAge(Duration.ofDays(7))
@@ -84,7 +85,7 @@ public class AuthController {
 
         ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(refreshCookieSecure)
                 .sameSite("Strict")
                 .path("/api/v1/auth/refresh")
                 .maxAge(0)
@@ -93,7 +94,7 @@ public class AuthController {
         // Also clear with broader path for compatibility (some browsers set without path)
         ResponseCookie clear2 = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(refreshCookieSecure)
                 .sameSite("Strict")
                 .path("/api/v1/auth")
                 .maxAge(0)

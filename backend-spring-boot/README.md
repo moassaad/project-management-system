@@ -38,6 +38,36 @@ JAVA_HOME=/tmp/jdk21 ./mvnw spring-boot:run -Dspring-boot.run.profiles=h2
 - Unknown `/api/v1/*` returns `404 application/problem+json` via `GlobalExceptionHandler`
 - `curl http://localhost:8080/` still `404` for root
 
+### Production run
+
+```bash
+# env (no secrets committed — set via deployment platform)
+export SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/pms
+export SPRING_DATASOURCE_USERNAME=pms
+export SPRING_DATASOURCE_PASSWORD=secret  # must change from default
+export JWT_SECRET="$(openssl rand -base64 64)"  # >=32B, required in prod
+export REFRESH_COOKIE_SECURE=true
+export CORS_ALLOWED_ORIGINS=https://app.example.com
+export SEED_USER_EMAIL=admin@example.com
+export SEED_USER_PASSWORD=strong-password
+
+# DB: Flyway (enabled true, validate, locations classpath:db/migration) auto-applies
+# V1 baseline → V2-5 on first start; verify migrations:
+#   select version, description from flyway_schema_history order by installed_rank;
+
+JAVA_HOME=/tmp/jdk21 ./mvnw spring-boot:run
+# health for readiness/liveness (public, no auth):
+curl http://localhost:8080/api/v1/health   # -> {"data":{"status":"UP"}}
+# monitoring: health probe every 30s (k8s liveness/readiness or uptime check)
+# logs: stdout via Spring Boot default (JSON not required, no APM); tail:
+#   docker logs -f app      # container
+#   journalctl -f -u pms    # systemd
+#   LOG_LEVEL=DEBUG JAVA_HOME=/tmp/jdk21 ./mvnw spring-boot:run  # verbose
+# local without DB (H2, Flyway disabled, ddl-auto create):
+JAVA_HOME=/tmp/jdk21 ./mvnw spring-boot:run -Dspring-boot.run.profiles=h2
+curl http://localhost:8080/api/v1/health
+```
+
 ## Configuration
 
 `src/main/resources/application.yml`:

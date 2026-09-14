@@ -17,8 +17,8 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
 
     @Query("""
             SELECT t FROM Task t WHERE t.project.id = :projectId
-            AND (:search IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', :search, '%'))
-                 OR LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%')))
+            AND (CAST(:search AS string) IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                 OR LOWER(t.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
             AND (:status IS NULL OR t.status = :status)
             AND (:type IS NULL OR t.type = :type)
             AND (:priority IS NULL OR t.priority = :priority)

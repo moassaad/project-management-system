@@ -778,49 +778,35 @@ The final response schemas will be defined in OpenAPI.
 
 ## 4.12 Error Response
 
-The API should use a consistent error structure.
+The API uses RFC 9457 Problem Details (authoritative spec in `docs/api/api-design.md` — **API Error Handling**).
 
-Example:
-
-```json
-{
-  "error": {
-    "code": "PROJECT_NOT_FOUND",
-    "message": "Project not found.",
-    "details": null
-  }
-}
-```
-
-Validation errors may contain field-level details:
+Example — not found:
 
 ```json
 {
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "The given data is invalid.",
-    "details": {
-      "title": [
-        "The title field is required."
-      ]
-    }
-  }
+  "type": "https://api.example.com/problems/resource-not-found",
+  "title": "Resource not found",
+  "status": 404,
+  "detail": "The requested project was not found.",
+  "instance": "/api/v1/projects/{projectId}"
 }
 ```
 
-The API should use standard HTTP status codes appropriately, including:
+Example — validation failure (422):
 
-```text
-400 Bad Request
-401 Unauthorized
-403 Forbidden
-404 Not Found
-409 Conflict
-422 Unprocessable Entity
-500 Internal Server Error
+```json
+{
+  "type": "https://api.example.com/problems/validation-error",
+  "title": "Validation failed",
+  "status": 422,
+  "detail": "One or more fields are invalid.",
+  "errors": [
+    { "detail": "The title field is required.", "pointer": "#/title" }
+  ]
+}
 ```
 
-The final list and semantics of errors will be defined in OpenAPI.
+Standard HTTP status codes (400, 401, 403, 404, 409, 422, 500) with `Content-Type: application/problem+json`; clients must use `status`/`type`/`errors` not `detail` text. See `docs/api/openapi-v1.yaml` for problem types. (Canonical definition: `docs/api/api-design.md`.)
 
 ---
 
@@ -843,34 +829,21 @@ The API should follow these principles:
 
 ---
 
-## 4.14 Open Decisions
+## 4.14 Finalized Decisions
 
-The following decisions are intentionally not finalized yet:
+Previously open decisions are now finalized (see `docs/api/api-design.md` — **Finalized Decisions** for authoritative details):
 
-### Authentication Token Lifecycle
+### Authentication Token Lifecycle — Finalized
 
-The system currently uses Bearer Tokens, but the following remain to be decided:
+Access Token (short-lived, memory, `Authorization: Bearer`) + Refresh Token (`HttpOnly Secure SameSite=Strict` cookie, Rotation, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`). Backend authoritative, frontend memory-only.
 
-* Access Token only
-* Access Token + Refresh Token
-* Token expiration policy
-* Refresh behavior
-* Token storage strategy on the frontend
-* Logout and token invalidation behavior
+### Backend Framework — Finalized
 
-These decisions must be finalized before implementation of authentication.
+`backend-spring-boot/` — Spring Boot 4.1.1 / Java 21 / Maven, modular monolith.
 
-### Backend Framework
+### Exact OpenAPI Schema — Finalized
 
-The backend framework remains undecided and will be finalized during the Tech Stack phase.
-
-### Exact OpenAPI Schema
-
-The detailed request/response schemas, reusable components, security schemes, and endpoint-level documentation will be finalized in:
-
-```text
-docs/api/openapi-v1.yaml
-```
+Generated from backend to `docs/api/openapi-v1.yaml` (not manually edited) per `docs/api/api-design.md` — **OpenAPI Generation Strategy**.
 
 ---
 

@@ -29,7 +29,7 @@ type MembersSectionProps = {
  * human-readable `detail`.
  */
 export function MembersSection({ projectId, isOwner }: MembersSectionProps) {
-  const { data, isLoading, isError, error } = useMembersQuery(projectId)
+  const { data, isLoading, isError, error, refetch } = useMembersQuery(projectId)
   const addMutation = useAddMemberMutation(projectId)
   const removeMutation = useRemoveMemberMutation(projectId)
   const [addError, setAddError] = useState<string | null>(null)
@@ -108,6 +108,9 @@ export function MembersSection({ projectId, isOwner }: MembersSectionProps) {
             ) : (
               <p className="text-sm text-red-700">Unable to load members. Please try again.</p>
             )}
+            <Button variant="secondary" size="sm" className="mt-3" onClick={() => void refetch()}>
+              Retry
+            </Button>
           </div>
         ) : !data || data.data.length === 0 ? (
           <p className="text-sm italic text-gray-500">No members yet.</p>

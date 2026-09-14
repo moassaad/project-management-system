@@ -9,7 +9,7 @@ import { me, refresh } from '../api/auth.api.ts'
  * and remounts must not fire duplicate refresh/me calls. Concurrent invocations
  * share one execution ("no repeated /me calls").
  */
-let bootstrapInflight: Promise<void> | null = null
+let bootstrapInflight: Promise<{ user: import('../types/auth.types.ts').User; token: string } | null> | null = null
 
 /**
  * Bootstrap auth on app load — refresh-first when no accessToken in memory.
@@ -18,60 +18,46 @@ let bootstrapInflight: Promise<void> | null = null
  * withCredentials, never read via JS. On 401 clears auth (route guards then
  * redirect to /login); 401 from /me with token gets a single refresh retry
  * via the shared HTTP interceptor. Sets isBootstrapping false when done.
+ *
+ * StrictMode double-mount shares one in-flight execution but each mount
+ * applies the result with its own cancelled guard.
  */
 export function useAuthBootstrap() {
   const isBootstrapping = useAuthStore((s) => s.isBootstrapping)
   const setBootstrapping = useAuthStore((s) => s.setBootstrapping)
   const setAuth = useAuthStore((s) => s.setAuth)
   const clearAuth = useAuthStore((s) => s.clearAuth)
-  const setAccessToken = useAuthStore((s) => s.setAccessToken)
 
   useEffect(() => {
     let cancelled = false
 
-    async function execute() {
+    async function execute(): Promise<{ user: import('../types/auth.types.ts').User; token: string } | null> {
       const { accessToken, user } = useAuthStore.getState()
 
-      // If already authenticated with user, nothing to do
       if (accessToken && user) {
-        if (!cancelled) setBootstrapping(false)
-        return
+        return { user, token: accessToken }
       }
 
-      // If token exists but no user (e.g., after refresh via interceptor), fetch user
       if (accessToken && !user) {
         try {
           const fetchedUser = await me()
-          if (!cancelled) setAuth(fetchedUser, accessToken)
+          return { user: fetchedUser, token: accessToken }
         } catch {
-          if (!cancelled) {
-            // Token invalid — clear
-            clearAuth()
-          }
-        } finally {
-          if (!cancelled) setBootstrapping(false)
+          return null
         }
-        return
       }
 
-      // No token — refresh-first via HttpOnly cookie (withCredentials);
-      // GET /me only runs after a token is obtained. With no session hint
-      // (fresh tab, never authenticated), skip refresh entirely instead of
-      // producing connection noise against a possibly-absent backend.
       if (!hasSessionHint()) {
-        if (!cancelled) setBootstrapping(false)
-        return
+        return null
       }
       try {
         const { accessToken: newToken } = await refresh()
-        if (!cancelled) setAccessToken(newToken)
+        // Make token available for the subsequent me() request (httpClient reads from store)
+        useAuthStore.getState().setAccessToken(newToken)
         const fetchedUser = await me()
-        if (!cancelled) setAuth(fetchedUser, newToken)
+        return { user: fetchedUser, token: newToken }
       } catch {
-        // 401 ProblemDetails — clear, stay unauthenticated (status/type, not detail string)
-        if (!cancelled) clearAuth()
-      } finally {
-        if (!cancelled) setBootstrapping(false)
+        return null
       }
     }
 
@@ -86,11 +72,23 @@ export function useAuthBootstrap() {
           bootstrapInflight = null
         })
       }
+      let result: { user: import('../types/auth.types.ts').User; token: string } | null
       try {
-        await bootstrapInflight
-      } finally {
-        if (!cancelled) setBootstrapping(false)
+        result = await bootstrapInflight
+      } catch {
+        result = null
       }
+      if (cancelled) return
+      if (result) {
+        setAuth(result.user, result.token)
+      } else {
+        // No session or refresh failed — ensure cleared (if was authenticated before, clear)
+        const { accessToken: curToken, user: curUser } = useAuthStore.getState()
+        if (curToken || curUser) {
+          clearAuth()
+        }
+      }
+      setBootstrapping(false)
     }
 
     bootstrap()
@@ -98,7 +96,7 @@ export function useAuthBootstrap() {
     return () => {
       cancelled = true
     }
-  }, [clearAuth, setAccessToken, setAuth, setBootstrapping])
+  }, [clearAuth, setAuth, setBootstrapping])
 
   return { isBootstrapping }
 }

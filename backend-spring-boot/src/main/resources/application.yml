@@ -28,6 +28,8 @@ app:
     secret: ${JWT_SECRET:dev-secret-must-be-at-least-64-bytes-long-for-hs512-change-me-in-prod-0123456789}
     access-expiration: 900000
     refresh-expiration: 604800000
+  auth:
+    refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:true}
   seed:
     email: ${SEED_USER_EMAIL:}
     password: ${SEED_USER_PASSWORD:}

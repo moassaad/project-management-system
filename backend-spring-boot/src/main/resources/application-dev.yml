@@ -1,3 +1,7 @@
+app:
+  auth:
+    refresh-cookie-secure: false
+
 spring:
   application:
     name: backend-spring-boot

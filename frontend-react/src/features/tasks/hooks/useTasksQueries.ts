@@ -56,6 +56,7 @@ export function useCreateTaskMutation(projectId: string) {
     mutationFn: (payload: CreateTaskRequest) => createTask(projectId, payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [...taskKeys.lists(), projectId] })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -67,6 +68,7 @@ export function useUpdateTaskMutation(projectId: string, taskId: string) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: taskKeys.detail(projectId, taskId) })
       void qc.invalidateQueries({ queryKey: [...taskKeys.lists(), projectId] })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -77,6 +79,7 @@ export function useDeleteTaskMutation(projectId: string) {
     mutationFn: (taskId: string) => deleteTask(projectId, taskId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [...taskKeys.lists(), projectId] })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

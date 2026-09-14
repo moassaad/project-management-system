@@ -67,7 +67,7 @@ async function buildDashboard(userId: string): Promise<DashboardData> {
   })
   return {
     projects,
-    myTasks: tasks.filter((t) => t.assigneeId === userId),
+    myTasks: tasks.filter((t) => t.assigneeId != null && t.assigneeId === userId),
     counts: {
       projectCount: projects.length,
       taskCount: tasks.length,

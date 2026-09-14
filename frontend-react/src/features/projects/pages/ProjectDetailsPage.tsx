@@ -22,7 +22,7 @@ function getStatus(error: unknown): number | undefined {
 export function ProjectDetailsPage() {
   const { projectId = '' } = useParams()
   const navigate = useNavigate()
-  const { data, isLoading, isError, error } = useProjectQuery(projectId)
+  const { data, isLoading, isError, error, refetch } = useProjectQuery(projectId)
   const currentUserId = useAuthStore((s) => s.user?.id)
   const deleteMutation = useDeleteProjectMutation()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -54,12 +54,17 @@ export function ProjectDetailsPage() {
           ) : (
             <p className="text-sm text-red-700">Unable to load project. Please try again.</p>
           )}
-          <Link
-            to="/projects"
-            className="mt-3 inline-block rounded text-sm text-blue-600 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          >
-            Back to projects
-          </Link>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={() => void refetch()}>
+              Retry
+            </Button>
+            <Link
+              to="/projects"
+              className="inline-flex h-8 items-center rounded-md border border-gray-300 bg-gray-100 px-3 text-sm font-medium text-gray-900 hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              Back to projects
+            </Link>
+          </div>
         </div>
       </section>
     )

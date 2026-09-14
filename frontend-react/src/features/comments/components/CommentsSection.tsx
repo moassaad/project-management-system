@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { Button } from '../../../components/ui/Button.tsx'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card.tsx'
 import { mapAddCommentErrors } from '../api/commentErrors.ts'
 import { useAddCommentMutation, useCommentsQuery } from '../hooks/useCommentsQueries.ts'
@@ -26,7 +27,7 @@ type CommentsSectionProps = {
  * Errors branch on ProblemDetails `status`, never on human-readable `detail`.
  */
 export function CommentsSection({ projectId, taskId }: CommentsSectionProps) {
-  const { data, isLoading, isError, error } = useCommentsQuery(projectId, taskId)
+  const { data, isLoading, isError, error, refetch } = useCommentsQuery(projectId, taskId)
   const addMutation = useAddCommentMutation(projectId, taskId)
   const [addError, setAddError] = useState<string | null>(null)
 
@@ -75,6 +76,9 @@ export function CommentsSection({ projectId, taskId }: CommentsSectionProps) {
             ) : (
               <p className="text-sm text-red-700">Unable to load comments. Please try again.</p>
             )}
+            <Button variant="secondary" size="sm" className="mt-3" onClick={() => void refetch()}>
+              Retry
+            </Button>
           </div>
         ) : !data || data.data.length === 0 ? (
           <p className="text-sm italic text-gray-500">No comments yet.</p>

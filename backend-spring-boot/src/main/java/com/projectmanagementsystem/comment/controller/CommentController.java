@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/projects/{projectId}/tasks/{taskId}/comments")
 @Tag(name = "comments")
+@org.springframework.validation.annotation.Validated
 public class CommentController {
 
     private final CommentService commentService;

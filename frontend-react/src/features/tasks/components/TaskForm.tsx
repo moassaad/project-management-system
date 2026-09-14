@@ -77,6 +77,10 @@ export function TaskForm<T extends FieldValues>({
   const titleError = errorFor('title')
   const descriptionError = errorFor('description')
   const assigneeError = errorFor('assigneeId')
+  const typeError = errorFor('type')
+  const statusError = errorFor('status')
+  const priorityError = errorFor('priority')
+  const dueDateError = errorFor('dueDate')
 
   return (
     <form onSubmit={handleSubmit(handle)} noValidate aria-label="Task form" className="space-y-4">
@@ -107,23 +111,37 @@ export function TaskForm<T extends FieldValues>({
           <label htmlFor="task-type" className="text-sm font-medium text-gray-700">
             Type
           </label>
-          <select id="task-type" className={selectClassName} {...register('type' as Path<T>)}>
+          <select
+            id="task-type"
+            className={selectClassName}
+            aria-invalid={!!typeError}
+            aria-describedby={typeError ? 'task-type-error' : undefined}
+            {...register('type' as Path<T>)}
+          >
             <option value="">—</option>
             <option value="FEATURE">FEATURE</option>
             <option value="BUG">BUG</option>
             <option value="IMPROVEMENT">IMPROVEMENT</option>
           </select>
+          {renderError('task-type-error', typeError)}
         </div>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="task-status" className="text-sm font-medium text-gray-700">
             Status
           </label>
-          <select id="task-status" className={selectClassName} {...register('status' as Path<T>)}>
+          <select
+            id="task-status"
+            className={selectClassName}
+            aria-invalid={!!statusError}
+            aria-describedby={statusError ? 'task-status-error' : undefined}
+            {...register('status' as Path<T>)}
+          >
             <option value="">—</option>
             <option value="TODO">TODO</option>
             <option value="IN_PROGRESS">IN_PROGRESS</option>
             <option value="DONE">DONE</option>
           </select>
+          {renderError('task-status-error', statusError)}
         </div>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="task-priority" className="text-sm font-medium text-gray-700">
@@ -132,6 +150,8 @@ export function TaskForm<T extends FieldValues>({
           <select
             id="task-priority"
             className={selectClassName}
+            aria-invalid={!!priorityError}
+            aria-describedby={priorityError ? 'task-priority-error' : undefined}
             {...register('priority' as Path<T>)}
           >
             <option value="">—</option>
@@ -139,6 +159,7 @@ export function TaskForm<T extends FieldValues>({
             <option value="MEDIUM">MEDIUM</option>
             <option value="HIGH">HIGH</option>
           </select>
+          {renderError('task-priority-error', priorityError)}
         </div>
       </div>
 
@@ -169,9 +190,11 @@ export function TaskForm<T extends FieldValues>({
         id="task-dueDate"
         label="Due date"
         type="date"
-        aria-invalid={!!errorFor('dueDate')}
+        aria-invalid={!!dueDateError}
+        aria-describedby={dueDateError ? 'task-dueDate-error' : undefined}
         {...register('dueDate' as Path<T>)}
       />
+      {renderError('task-dueDate-error', dueDateError)}
 
       {serverError ? (
         <p role="alert" aria-live="polite" className="text-sm text-red-600">

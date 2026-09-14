@@ -20,10 +20,22 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class CorsConfig {
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @org.springframework.beans.factory.annotation.Value("${CORS_ALLOWED_ORIGINS:}")
+            String envOrigins,
+            @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:}")
+            String appOrigins) {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.addAllowedOrigin("http://localhost:5173");
+        // Prod origins via env (comma-separated) — e.g. CORS_ALLOWED_ORIGINS=https://app.example.com
+        String combined = (envOrigins == null ? "" : envOrigins) + "," + (appOrigins == null ? "" : appOrigins);
+        for (String origin : combined.split(",")) {
+            String o = origin.trim();
+            if (!o.isEmpty()) {
+                config.addAllowedOrigin(o);
+            }
+        }
         config.addAllowedHeader("Authorization");
         config.addAllowedHeader("Content-Type");
         config.addAllowedHeader("Accept");

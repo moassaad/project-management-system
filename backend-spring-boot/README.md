@@ -113,19 +113,33 @@ Change `server.port` to run on a different port.
 
 ```bash
 # from backend-spring-boot/
-./mvnw test          # unit + MockMvc (20 tests) — uses H2, no Docker needed
+./mvnw test          # unit + MockMvc (144 tests) — uses H2, no Docker needed
+./mvnw verify -o     # offline verify (repackage + failsafe SmokeIT skipped without Docker)
 ./mvnw verify        # full build + repackage (target/*.jar) + failsafe SmokeIT (skipped if Docker unavailable)
 ./mvnw test -Dtest=SmokeIT  # Testcontainers postgres:16-alpine — requires Docker, proves Flyway V1 + JPA bootstrap
+./mvnw test -Dtest=TaskControllerTest  # single suite (any *Test class)
 ./mvnw validate      # POM validation only
 ```
 
 All commands require Java 21 — prefix with `JAVA_HOME=/tmp/jdk21` if system default is 17:
 
 ```bash
-JAVA_HOME=/tmp/jdk21 ./mvnw verify -B
+JAVA_HOME=/tmp/jdk21 ./mvnw verify -o -B
+JAVA_HOME=$HOME/.jdk21 ./mvnw verify -o  # persistent JDK (symlink /tmp/jdk21 -> $HOME/.jdk21)
 ```
 
-Expected: `Tests run: 20, Failures: 0, Errors: 0` (plus `SmokeIT` `Skipped:1` if Docker unavailable, `1 PASS` if Docker available) + `BUILD SUCCESS`.
+Expected: `Tests run: 144, Failures: 0, Errors: 0, Skipped: 4` (Testcontainers `AuthIntegrationTest` 4 + `TaskUnassignIT`/`SmokeIT` skipped without Docker) + `BUILD SUCCESS`.
+
+**Frontend (root):** `frontend-react/` uses Vite + Vitest (35 files 175+ tests):
+```bash
+cd frontend-react
+npm install
+npm run dev    # http://localhost:5173 (VITE_API_URL=http://localhost:8080/api/v1 by default)
+npm run build  # production build (set VITE_API_URL=https://api.example.com/api/v1)
+npm run test   # vitest --run 35 files 175+ passed
+npm run test -- src/features/tasks/api/tasks.api.test.ts  # single suite
+npx tsc -b && npm run lint  # type/lint green
+```
 
 **Testcontainers Harness (BE-S002-08):**
 - `src/test/java/com/projectmanagementsystem/AbstractIntegrationTest.java` — `@Testcontainers(disabledWithoutDocker=true)` `@Container PostgreSQLContainer("postgres:16-alpine")` `@DynamicPropertySource` overriding `spring.datasource.*` + `spring.flyway.enabled=true` + `ddl-auto=validate`
@@ -167,6 +181,15 @@ backend-spring-boot/
 ├── README.md
 └── CHANGELOG.md
 ```
+
+## Known limitations (MVP)
+
+- Auth: no registration endpoint — seed via `SEED_USER_EMAIL/PASSWORD` + `POST /auth/login`; no password reset; access 15m / refresh 7d single-use `jti` rotation.
+- Projects: pagination `page/perPage` scoped to membership, `GET /projects` 5*20 ≈100 shown then truncation client-side; no org/team hierarchy.
+- Tasks: `3*20` tasks per project truncation client-side; search case-insensitive `LIKE` without FTS; no real-time/websocket, no bulk ops, no file attachments.
+- Comments: list/create only, no edit/delete, ordered by `createdAt`.
+- Frontend: no APM/analytics, `VITE_API_URL` public, refresh via `HttpOnly Secure` cookie `withCredentials:true` + `SameSite=Strict`; no offline support.
+- Backend: no rate limiting, no Actuator/APM beyond `GET /health` + stdout logs `LOG_LEVEL` env; Flyway `validate` only, no down migrations.
 
 ## Sprint 001 — Bootstrap
 

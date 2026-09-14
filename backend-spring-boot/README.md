@@ -103,9 +103,20 @@ Change `server.port` to run on a different port.
   # or: docker-compose up -d pms-db  # standalone hyphen binary
   # if `unknown shorthand flag: d` → your `docker` has no plugin; use hyphen or:
   #   sudo apt install docker-compose-plugin && docker compose version
+  # if `docker-compose: not found` + `Unable to locate package docker-compose-plugin` (Ubuntu 24.04):
+  #   sudo curl -SL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose
   docker compose down   # or docker-compose down
   ```
-- `spring-boot:run` requires DB — use `h2` profile if Docker unavailable (`JAVA_HOME=$HOME/.jdk21 ./mvnw spring-boot:run -Dspring-boot.run.profiles=h2`); `verify` uses H2 by default, Testcontainers `SmokeIT` uses real postgres when Docker available
+- `spring-boot:run` default needs Postgres — if you see `FATAL: password authentication failed for user "pms"` / `Unable to determine Dialect`:
+  ```bash
+  # Postgres not running or wrong password → start DB or use H2 fallback (no Docker):
+  JAVA_HOME=$HOME/.jdk21 ./mvnw spring-boot:run -Dspring-boot.run.profiles=h2
+  # with seed + H2:
+  JAVA_HOME=$HOME/.jdk21 SEED_USER_EMAIL=dev@example.com SEED_USER_PASSWORD=DevPass123! ./mvnw spring-boot:run -Dspring-boot.run.profiles=h2
+  curl http://localhost:8080/api/v1/health  # {"data":{"status":"UP"}}
+  ```
+  The app now shows a `FailureAnalysis` hint on this error (see `PostgresConnectionFailureAnalyzer`).
+- `verify` uses H2 by default, Testcontainers `SmokeIT` uses real postgres when Docker available
 
 **Validation & Errors (RFC 9457):**
 - `spring-boot-starter-validation` (Jakarta Validation 3.x, Hibernate Validator)

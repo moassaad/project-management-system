@@ -40,7 +40,9 @@ public class JwtService {
 
     @PostConstruct
     void validateSecret() {
-        // Ensure secret not default in production is documented; allow dev default
+        if (key == null || accessExpirationMs <= 0 || refreshExpirationMs <= 0) {
+            throw new IllegalStateException("JWT configuration invalid: key or expirations not set");
+        }
     }
 
     public String generateAccessToken(UUID userId) {

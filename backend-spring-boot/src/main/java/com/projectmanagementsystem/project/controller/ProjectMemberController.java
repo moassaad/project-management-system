@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/projects/{projectId}/members")
 @Tag(name = "project-members")
+@org.springframework.validation.annotation.Validated
 public class ProjectMemberController {
 
     private final ProjectService projectService;

@@ -99,10 +99,13 @@ Change `server.port` to run on a different port.
 - Flyway baseline `src/main/resources/db/migration/V1__baseline.sql` — pgcrypto comment placeholder, no domain tables, `BaseEntity` `@MappedSuperclass` `UUID @UuidGenerator` `@CreationTimestamp/@UpdateTimestamp`
 - Local DB: `docker-compose.yml` (`pms-db`, `postgres:16-alpine`, `5432:5432`, `POSTGRES_DB=pms POSTGRES_USER=pms POSTGRES_PASSWORD=pms`, volume `pms-db-data`, healthcheck `pg_isready`)
   ```bash
-  docker compose up -d pms-db   # from backend-spring-boot/
-  docker compose down
+  docker compose up -d pms-db   # from backend-spring-boot/ (Docker Compose plugin v2)
+  # or: docker-compose up -d pms-db  # standalone hyphen binary
+  # if `unknown shorthand flag: d` → your `docker` has no plugin; use hyphen or:
+  #   sudo apt install docker-compose-plugin && docker compose version
+  docker compose down   # or docker-compose down
   ```
-- `spring-boot:run` requires DB — use `h2` profile if Docker unavailable; `verify` uses H2 by default, Testcontainers `SmokeIT` uses real postgres when Docker available
+- `spring-boot:run` requires DB — use `h2` profile if Docker unavailable (`JAVA_HOME=$HOME/.jdk21 ./mvnw spring-boot:run -Dspring-boot.run.profiles=h2`); `verify` uses H2 by default, Testcontainers `SmokeIT` uses real postgres when Docker available
 
 **Validation & Errors (RFC 9457):**
 - `spring-boot-starter-validation` (Jakarta Validation 3.x, Hibernate Validator)

@@ -169,4 +169,115 @@ describe('useDashboardQuery (behavior)', () => {
 
     expect(await screen.findByText(/failed to load dashboard/i)).toBeInTheDocument()
   })
+
+  it('excludes null/undefined assigneeId and includes only strict UUID match (behavior)', async () => {
+    signInAsMember()
+    const ALPHA = '00000000-0000-4000-a000-000000000010'
+    server.use(
+      http.get(`*/api/v1/projects/${ALPHA}/tasks`, () =>
+        HttpResponse.json({
+          data: [
+            {
+              id: '00000000-0000-4000-a000-000000000a10',
+              projectId: ALPHA,
+              title: 'My Assigned Task',
+              description: null,
+              type: 'FEATURE',
+              status: 'TODO',
+              priority: 'MEDIUM',
+              assigneeId: MEMBER_ID,
+              dueDate: null,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: '00000000-0000-4000-a000-000000000a20',
+              projectId: ALPHA,
+              title: 'Unassigned Null',
+              description: null,
+              type: 'BUG',
+              status: 'TODO',
+              priority: 'MEDIUM',
+              assigneeId: null,
+              dueDate: null,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: '00000000-0000-4000-a000-000000000a30',
+              projectId: ALPHA,
+              title: 'Unassigned Undefined',
+              description: null,
+              type: 'BUG',
+              status: 'TODO',
+              priority: 'MEDIUM',
+              // intentionally missing assigneeId to simulate undefined
+              dueDate: null,
+              createdAt: new Date().toISOString(),
+            } as unknown as Record<string, unknown>,
+            {
+              id: '00000000-0000-4000-a000-000000000a40',
+              projectId: ALPHA,
+              title: 'Other User Task',
+              description: null,
+              type: 'BUG',
+              status: 'TODO',
+              priority: 'MEDIUM',
+              assigneeId: '00000000-0000-4000-a000-000000000099',
+              dueDate: null,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+          meta: { currentPage: 1, perPage: 20, total: 4, lastPage: 1 },
+        }),
+      ),
+    )
+    renderProbe()
+
+    expect(await screen.findByText('My Assigned Task')).toBeInTheDocument()
+    expect(screen.queryByText('Unassigned Null')).not.toBeInTheDocument()
+    expect(screen.queryByText('Unassigned Undefined')).not.toBeInTheDocument()
+    expect(screen.queryByText('Other User Task')).not.toBeInTheDocument()
+    // Beta's task is DONE unassigned, so 5 total, 4 todo, 1 done, 1 myTask
+    expect(screen.getByText(/projects:2 tasks:5 todo:4 done:1/)).toBeInTheDocument()
+  })
+
+  it('derives myTasks from truncated loaded set, not silent empty (behavior)', async () => {
+    signInAsMember()
+    const BETA = '00000000-0000-4000-a000-000000000020'
+    server.use(
+      http.get(`*/api/v1/projects/${BETA}/tasks`, ({ request }) => {
+        const url = new URL(request.url)
+        const page = Number(url.searchParams.get('page') ?? '1')
+        const perPage = Number(url.searchParams.get('perPage') ?? '20')
+        // 61 tasks, every 3rd is assigned to MEMBER_ID, within first 60
+        const all = Array.from({ length: 61 }, (_, i) => ({
+          id: `beta-trunc-${i + 1}`,
+          projectId: BETA,
+          title: `Beta task ${i + 1}`,
+          description: null,
+          type: 'FEATURE',
+          status: 'TODO',
+          priority: 'MEDIUM',
+          assigneeId: (i + 1) % 3 === 0 ? MEMBER_ID : null,
+          dueDate: null,
+          createdAt: new Date().toISOString(),
+        }))
+        const start = (page - 1) * perPage
+        return HttpResponse.json({
+          data: all.slice(start, start + perPage),
+          meta: { currentPage: page, perPage, total: all.length, lastPage: 4 },
+        })
+      }),
+    )
+    renderProbe()
+
+    // 2 Alpha tasks (1 assigned) + 60 Beta (20 assigned in first 60) = 21 myTasks from truncated 62 tasks
+    expect(await screen.findByText('Setup CI')).toBeInTheDocument()
+    expect(screen.getByText(/tasks:62/)).toBeInTheDocument()
+    expect(screen.getByText(/failed:0 truncated:true/)).toBeInTheDocument()
+    // My tasks should contain assigned from truncated set, not be empty
+    expect(screen.getByText('Beta task 3')).toBeInTheDocument()
+    expect(screen.getByText('Beta task 6')).toBeInTheDocument()
+    expect(screen.queryByText('Beta task 1')).not.toBeInTheDocument() // unassigned
+    expect(screen.queryByText('Beta task 2')).not.toBeInTheDocument()
+  })
 })

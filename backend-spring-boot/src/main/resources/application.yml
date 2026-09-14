@@ -37,6 +37,11 @@ app:
     email: ${SEED_USER_EMAIL:}
     password: ${SEED_USER_PASSWORD:}
 
+logging:
+  level:
+    com.projectmanagementsystem: ${LOG_LEVEL:INFO}
+    org.springframework: INFO
+
 springdoc:
   api-docs:
     path: /v3/api-docs

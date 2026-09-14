@@ -58,6 +58,11 @@ export SEED_USER_PASSWORD=strong-password
 JAVA_HOME=/tmp/jdk21 ./mvnw spring-boot:run
 # health for readiness/liveness (public, no auth):
 curl http://localhost:8080/api/v1/health   # -> {"data":{"status":"UP"}}
+# monitoring: health probe every 30s (k8s liveness/readiness or uptime check)
+# logs: stdout via Spring Boot default (JSON not required, no APM); tail:
+#   docker logs -f app      # container
+#   journalctl -f -u pms    # systemd
+#   LOG_LEVEL=DEBUG JAVA_HOME=/tmp/jdk21 ./mvnw spring-boot:run  # verbose
 # local without DB (H2, Flyway disabled, ddl-auto create):
 JAVA_HOME=/tmp/jdk21 ./mvnw spring-boot:run -Dspring-boot.run.profiles=h2
 curl http://localhost:8080/api/v1/health
